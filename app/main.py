@@ -33,6 +33,15 @@ if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
 else:
     print("[Main] Provider Health tools desativados")
 
+if os.getenv('DISABLE_TOOLS_HEALTH') != 'true':
+    try:
+        import app.tools.tools_health
+        print("[Main] Tools Health tools OK")
+    except Exception as e:
+        print(f"[Main] Tools Health tools fail: {e}")
+else:
+    print("[Main] Tools Health tools desativados")
+
 from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
 
 providers_available = False
@@ -43,6 +52,15 @@ if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
         print("[Main] Providers API OK")
     except Exception as e:
         print(f"[Main] Providers API fail: {e}")
+
+tools_health_available = False
+if os.getenv('DISABLE_TOOLS_HEALTH') != 'true':
+    try:
+        from app.api import tools_health as tools_health_api
+        tools_health_available = True
+        print("[Main] Tools Health API OK")
+    except Exception as e:
+        print(f"[Main] Tools Health API fail: {e}")
 
 init_db()
 init_default_agents()
@@ -56,7 +74,7 @@ chat.set_orchestrator(orchestrator)
 
 app = FastAPI(
     title=settings.app_name,
-    description="GOD Cerebro Core — 9 agentes + auto-refresh + KPIs dinâmicos + Provider Health Ranking",
+    description="GOD Cerebro Core — 10 agentes + auto-refresh + KPIs dinâmicos + Provider Health + Tools Health Ranking",
     version="1.0.0"
 )
 
@@ -78,6 +96,8 @@ app.include_router(market.router, prefix="", tags=["market"])
 app.include_router(businesses.router, prefix="", tags=["negocios"])
 if providers_available:
     app.include_router(providers.router, prefix="", tags=["providers"])
+if tools_health_available:
+    app.include_router(tools_health_api.router, prefix="", tags=["tools-health"])
 
 frontend_path = ROOT_DIR / "frontend"
 workspace_path = ROOT_DIR / settings.workspace_path
@@ -115,7 +135,9 @@ def root():
         "frontend_exists": frontend_exists,
         "auto_refresh": True,
         "kpis_dynamic": True,
-        "provider_health": providers_available
+        "provider_health": providers_available,
+        "tools_health": tools_health_available,
+        "multi_links": True
     }
 
 def main():
@@ -126,11 +148,17 @@ def main():
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
     if os.getenv('DISABLE_SCHEDULER') != 'true':
         try:
-            from app.tools.scheduler import start_provider_health_scheduler
-            start_provider_health_scheduler()
-            print("Scheduler iniciado")
+            from app.tools.scheduler import start_all_health_schedulers
+            start_all_health_schedulers()
+            print("All Health Schedulers iniciados — provider 5min + tools 10min")
         except Exception as e:
             print(f"Scheduler fail: {e}")
+            # Fallback tenta só provider
+            try:
+                from app.tools.scheduler import start_provider_health_scheduler
+                start_provider_health_scheduler()
+            except:
+                pass
     else:
         print("Scheduler desativado")
     uvicorn.run("app.main:app", host=settings.app_host, port=port, reload=False)
