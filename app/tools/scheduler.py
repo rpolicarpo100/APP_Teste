@@ -63,3 +63,81 @@ def scheduler_list() -> dict:
         return {"jobs": jobs, "count": len(jobs)}
     except Exception as e:
         return {"error": str(e), "jobs": []}
+
+def provider_health_check_job():
+    """Job que verifica saúde dos providers e atualiza ranking"""
+    try:
+        from app.agents.provider_health import ProviderHealthAgent
+        from app.agents.base import TaskInput
+        import uuid
+        print(f"[ProviderHealthScheduler] Verificando providers em {datetime.utcnow().isoformat()}")
+        agent = ProviderHealthAgent()
+        task = TaskInput(
+            task_id=str(uuid.uuid4()),
+            mission_id=str(uuid.uuid4()),
+            agent_id="provider_health",
+            objective="verificar saúde de todos os providers - job agendado"
+        )
+        output = agent.execute(task)
+        print(f"[ProviderHealthScheduler] Resultado: {output.summary}")
+    except Exception as e:
+        print(f"[ProviderHealthScheduler] Erro: {e}")
+
+def start_provider_health_scheduler():
+    """Inicia scheduler que verifica providers a cada 5 minutos"""
+    try:
+        scheduler = get_scheduler()
+        # Remove job existente se houver
+        try:
+            scheduler.remove_job("provider_health_check")
+        except:
+            pass
+        
+        # Adiciona job a cada 5 minutos
+        scheduler.add_job(
+            provider_health_check_job,
+            'interval',
+            minutes=5,
+            id="provider_health_check",
+            name="Provider Health Check - verifica providers a cada 5 min",
+            replace_existing=True,
+            next_run_time=datetime.utcnow()
+        )
+        
+        # Também adiciona job a cada hora para recalcular ranking
+        try:
+            scheduler.remove_job("provider_ranking_recalc")
+        except:
+            pass
+        
+        def recalc_ranking_job():
+            try:
+                import sqlite3
+                from pathlib import Path
+                DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "brain.db"
+                conn = sqlite3.connect(str(DB_PATH))
+                cur = conn.cursor()
+                cur.execute("SELECT provider_id, score FROM provider_rankings ORDER BY score DESC, success_count DESC")
+                ranked = cur.fetchall()
+                for rank, (provider_id, _) in enumerate(ranked, 1):
+                    cur.execute("UPDATE provider_rankings SET rank=? WHERE provider_id=?", (rank, provider_id))
+                conn.commit()
+                conn.close()
+                print(f"[ProviderRankingScheduler] Ranking recalculado em {datetime.utcnow().isoformat()}")
+            except Exception as e:
+                print(f"[ProviderRankingScheduler] Erro: {e}")
+        
+        scheduler.add_job(
+            recalc_ranking_job,
+            'interval',
+            hours=1,
+            id="provider_ranking_recalc",
+            name="Recalcula ranking providers a cada hora",
+            replace_existing=True
+        )
+        
+        print(f"[Scheduler] Provider Health jobs agendados: check a cada 5 min, ranking a cada 1h")
+        return True
+    except Exception as e:
+        print(f"[Scheduler] Erro ao iniciar provider health scheduler: {e}")
+        return False

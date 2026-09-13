@@ -555,6 +555,7 @@
                   <div class="kpi"><b id="detail-missions">0</b><span>Missões</span></div>
                   <div class="kpi"><b id="detail-tasks">0</b><span>Tasks</span></div>
                 </div>
+                <div id="biz-dynamic-kpis-detail" style="margin-top:12px"></div>
                 <div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px">
                   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:6px">Descrição</div>
                   <div id="detail-desc" style="font-size:13px;line-height:1.5">—</div>
@@ -610,7 +611,8 @@
           </div>
           <div class="field"><label>Nome do negócio *</label><input id="m-name" placeholder="Ex: Trading Tools PT"></div>
           <div class="row2">
-            <div class="field"><label>Setor</label><input id="m-sector" placeholder="Ex: Finanças, E-commerce"></div>
+            <div class="field"><label>Setor * (auto-detecta KPIs)</label><input id="m-sector" placeholder="Ex: Restauração, SaaS, E-commerce" oninput="suggestKPIs()"></div>
+            <div id="kpi-suggestions-preview"></div>
             <div class="field"><label>Estado</label><select id="m-status"><option value="ideia">💡 Ideia</option><option value="validacao">🔍 Validação</option><option value="ativo" selected>✅ Ativo</option><option value="pausado">⏸️ Pausado</option><option value="vendido">💰 Vendido</option><option value="arquivado">📦 Arquivado</option></select></div>
           </div>
           <div class="field"><label>Descrição</label><textarea id="m-desc" placeholder="O que faz este negócio?"></textarea></div>
@@ -640,6 +642,7 @@
             <h1 style="font-size:26px;letter-spacing:-0.6px;margin-bottom:6px">Definições</h1>
             <p style="color:var(--text2);font-size:13px">App leve, sem cloud. Tudo configurável no teu PC — dividido por tabs.</p>
           </div>
+          <button id="auto-refresh-toggle" class="btn" style="background:var(--greenSoft);color:var(--green);border:1px solid var(--green);font-size:12px" onclick="toggleAutoRefresh()">🔄 Auto: ON</button>
           <button class="btn" style="background:var(--card);border:1px solid var(--border)" onclick="loadSystem();loadNetwork();loadDataTab();loadBusinesses();loadDashboard()">↻ Actualizar tudo</button>
         </div>
 
@@ -746,6 +749,29 @@
               <span>• Círculo externo = 21 Tools por categoria</span>
               <span>• Linhas = Conexões reais validadas pelo Tool Registry</span>
             </div>
+          </div>
+
+          <!-- PROVIDER HEALTH + RANKING — NOVO AGENTE -->
+          <div class="card" style="margin-bottom:14px;border:2px solid var(--green)">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+              <h3 style="margin:0">🛡️ Provider Health — Ranking por Experiência</h3>
+              <div style="display:flex;gap:6px">
+                <button class="btn" style="background:var(--greenSoft);color:var(--green);border:1px solid var(--green);font-size:11px;padding:6px 10px" onclick="loadProviderHealth()">↻ Verificar Agora</button>
+                <span id="provider-health-status" style="font-size:10px;color:var(--text3);padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:20px">—</span>
+              </div>
+            </div>
+            <div id="provider-health-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:12px">A verificar providers...</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text2);margin-bottom:6px">🏆 Ranking por Experiência (preferência automática)</div>
+                <div id="provider-ranking-list" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px">A carregar ranking...</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text2);margin-bottom:6px">🔄 Failover Automático</div>
+                <div id="provider-failover-list" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px">A carregar failover...</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text3)">Agente Provider Health verifica a cada 5 min (scheduler) + auto-refresh a cada 30s. Se provider falha 3x, troca por alternativa com melhor score. Ranking baseado em success_rate, latência e experiência.</div>
           </div>
 
           <!-- AGENTES NETWORK -->
@@ -933,12 +959,64 @@ const API_BASE = window.location.origin;
 let conversationId = null;
 const $ = id => document.getElementById(id);
 
+// AUTO-REFRESH — x em x tempo atualiza sozinho, sem carregar
+let autoRefreshEnabled = true;
+let autoRefreshIntervals = {};
+const AUTO_REFRESH_TIMES = {
+  dashboard: 30000,    // 30s
+  businesses: 30000,   // 30s
+  network: 60000,      // 60s
+  data: 60000,         // 60s
+  market: 60000,       // 60s
+  providers: 30000     // 30s
+};
+
+function startAutoRefresh(){
+  stopAutoRefresh();
+  if(!autoRefreshEnabled) return;
+  console.log('🔄 Auto-refresh iniciado', AUTO_REFRESH_TIMES);
+  autoRefreshIntervals.dashboard = setInterval(()=>{ if(!document.getElementById('page-dashboard').classList.contains('hidden')) loadDashboard(); }, AUTO_REFRESH_TIMES.dashboard);
+  autoRefreshIntervals.businesses = setInterval(()=>{ if(!document.getElementById('page-negocios').classList.contains('hidden')) loadBusinesses(); }, AUTO_REFRESH_TIMES.businesses);
+  autoRefreshIntervals.network = setInterval(()=>{ const el=$('def-network'); if(el && !el.classList.contains('hidden')) { loadNetwork(); loadProviderHealth(); } }, AUTO_REFRESH_TIMES.network);
+  autoRefreshIntervals.data = setInterval(()=>{ const el=$('def-data'); if(el && !el.classList.contains('hidden')) loadDataTab(); }, AUTO_REFRESH_TIMES.data);
+  autoRefreshIntervals.market = setInterval(()=>{ if(!document.getElementById('page-dashboard').classList.contains('hidden')) { loadNews(); loadMarket(); } }, AUTO_REFRESH_TIMES.market);
+  autoRefreshIntervals.providers = setInterval(()=>{ loadProviderHealth(); }, AUTO_REFRESH_TIMES.providers);
+}
+
+function stopAutoRefresh(){
+  Object.values(autoRefreshIntervals).forEach(id=> clearInterval(id));
+  autoRefreshIntervals = {};
+}
+
+function toggleAutoRefresh(){
+  autoRefreshEnabled = !autoRefreshEnabled;
+  const btn = $('auto-refresh-toggle');
+  if(btn){
+    btn.textContent = autoRefreshEnabled ? '🔄 Auto: ON' : '⏸️ Auto: OFF';
+    btn.style.background = autoRefreshEnabled ? 'var(--greenSoft)' : 'var(--bg2)';
+    btn.style.color = autoRefreshEnabled ? 'var(--green)' : 'var(--text3)';
+  }
+  if(autoRefreshEnabled) startAutoRefresh();
+  else stopAutoRefresh();
+  // Salva preferência
+  try{ localStorage.setItem('autoRefresh', autoRefreshEnabled ? '1' : '0'); }catch(e){}
+}
+
+// Carrega preferência
+try{
+  const saved = localStorage.getItem('autoRefresh');
+  if(saved === '0') autoRefreshEnabled = false;
+}catch(e){}
+
+
+
 function switchTab(page){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelector(`.tab[data-page="${page}"]`).classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(`page-${page}`).classList.remove('hidden');
-  if(page==='dashboard') loadDashboard();
+  if(page==='dashboard'){ loadDashboard(); startAutoRefresh(); }
+  if(page==='negocios'){ loadBusinesses(); startAutoRefresh(); }
   if(page==='chat') {}
   if(page==='negocios') loadBizMissoes();
   if(page==='definicoes') loadSystem();
@@ -1259,6 +1337,39 @@ async function selectBusiness(id){
   $('detail-status').textContent = b.status;
   $('detail-status').className = 'status ' + (b.status==='ativo'?'COMPLETED':b.status==='ideia'?'PENDING':'READY');
   $('detail-revenue').textContent = '€' + (b.revenue_monthly||0).toLocaleString('pt-PT');
+  // KPIs dinâmicos por setor — reconhece que KPIs mostrar
+  try{
+    const dynContainer = $('biz-dynamic-kpis-detail');
+    if(dynContainer){
+      const cfg = b.kpis_config_parsed || b.kpis_suggested || {label: b.sector || 'Geral', kpis: []};
+      const dynamic = b.dynamic_kpis || {};
+      const suggestedKpis = cfg.kpis || [];
+      if(suggestedKpis.length){
+        dynContainer.innerHTML = `
+          <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px">
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text2);margin-bottom:8px">📊 KPIs Reconhecidos — ${cfg.label || b.sector || 'Geral'}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+              ${suggestedKpis.map(k=>{
+                let val = dynamic[k.id];
+                if(val === undefined){
+                  // fallback para receita etc
+                  if(k.id === 'receita' || k.id === 'mrr') val = '€' + (b.revenue_monthly||0);
+                  else if(k.id === 'custos') val = '€' + (b.costs_monthly||0);
+                  else if(k.id === 'lucro') val = '€' + (b.profit_monthly||0);
+                  else if(k.id === 'margem') val = (b.margin_percent||0).toFixed(1) + '%';
+                  else val = dynamic[k.id] || '—';
+                }
+                return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center"><div style="font-size:16px">${k.icon}</div><div style="font-size:10px;font-weight:700;margin:4px 0">${k.label}</div><div style="font-size:12px;font-weight:800">${val}${val!=='—' && !String(val).includes('€') && !String(val).includes('%') ? (k.unit||'') : ''}</div></div>`;
+              }).join('')}
+            </div>
+            <div style="font-size:9px;color:var(--text3);margin-top:8px">Auto-detectado para setor ${b.sector || 'geral'} • ${suggestedKpis.length} KPIs</div>
+          </div>
+        `;
+      } else {
+        dynContainer.innerHTML = '';
+      }
+    }
+  }catch(e){ console.error('dynamic kpis error', e); }
   $('detail-costs').textContent = '€' + (b.costs_monthly||0).toLocaleString('pt-PT');
   $('detail-profit').textContent = '€' + (b.profit_monthly||0).toLocaleString('pt-PT');
   $('detail-margin').textContent = (b.margin_percent||0).toFixed(1)+'%';
@@ -1333,6 +1444,31 @@ function quickEditBusiness(id){
 
 function editCurrentBusiness(){
   if(selectedBusinessId) openBusinessModal(selectedBusinessId);
+}
+
+async function suggestKPIs(){
+  const sectorEl = $('m-sector');
+  const sector = sectorEl ? sectorEl.value : '';
+  if(!sector || sector.length < 2) {
+    const preview = $('kpi-suggestions-preview');
+    if(preview) preview.innerHTML = '';
+    return;
+  }
+  try{
+    const data = await apiFetch('/businesses/kpis/suggestions?sector=' + encodeURIComponent(sector));
+    const preview = $('kpi-suggestions-preview');
+    if(preview && data.suggested){
+      preview.innerHTML = `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;margin:8px 0">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px">📊 KPIs auto-detectados para ${data.suggested.label}: </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            ${data.suggested.kpis.map(k=>`<span style="font-size:10px;background:var(--card);border:1px solid var(--border);padding:3px 8px;border-radius:20px">${k.icon} ${k.label} (${k.unit})</span>`).join('')}
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:6px">Estes KPIs serão reconhecidos automaticamente ao guardar</div>
+        </div>
+      `;
+    }
+  }catch(e){ console.error('kpi suggest error', e); }
 }
 
 async function saveBusiness(){
@@ -1546,7 +1682,8 @@ function switchDefTab(cat){
   if(cat==='network') loadNetwork();
   if(cat==='ai') loadSystem();
   if(cat==='security') loadAuditLogs();
-  if(cat==='data') { loadNetwork(); loadDataTab(); }
+  if(cat==='data') { loadNetwork(); loadDataTab(); startAutoRefresh(); }
+  if(cat==='network'){ loadNetwork(); loadProviderHealth(); startAutoRefresh(); }
   if(cat==='geral') loadSystem();
 }
 
@@ -1628,6 +1765,85 @@ function renderNetworkGraph(data){
   container.innerHTML = svg;
 }
 
+
+async function loadProviderHealth(){
+  try{
+    const healthEl = $('provider-health-grid');
+    const rankingEl = $('provider-ranking-list');
+    const failoverEl = $('provider-failover-list');
+    const statusEl = $('provider-health-status');
+    if(statusEl) statusEl.textContent = 'A verificar...';
+    
+    const data = await apiFetch('/providers/health');
+    if(data.error){
+      if(healthEl) healthEl.innerHTML = `<div style="color:#d93a00">Erro: ${data.error}</div>`;
+      return;
+    }
+    
+    const stats = data.stats || {};
+    if(statusEl) statusEl.textContent = `${stats.ok||0} OK • ${stats.fail||0} FAIL • ${data.rankings?.length||0} providers`;
+    if(statusEl) statusEl.style.background = (stats.fail||0) > 0 ? '#ffe8e8' : 'var(--greenSoft)';
+    if(statusEl) statusEl.style.color = (stats.fail||0) > 0 ? '#d93a00' : 'var(--green)';
+    
+    // Health grid
+    if(healthEl && data.health){
+      healthEl.innerHTML = data.health.map(h=>{
+        const ok = h.status === 'ok';
+        const color = ok ? 'var(--green)' : (h.status === 'degraded' ? '#f59e0b' : '#d93a00');
+        const bg = ok ? 'var(--greenSoft)' : (h.status === 'degraded' ? '#fef3c7' : '#ffe8e8');
+        return `
+          <div style="background:var(--bg);border:1px solid ${color};border-radius:12px;padding:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <b style="font-size:12px">${h.name || h.provider_id}</b>
+              <span style="font-size:10px;font-weight:800;color:${color};background:${bg};padding:3px 8px;border-radius:20px">${h.status?.toUpperCase()}</span>
+            </div>
+            <div style="font-size:10px;color:var(--text2)">${h.provider_id} • ${h.latency_ms||0}ms</div>
+            ${h.error ? `<div style="font-size:9px;color:#d93a00;margin-top:4px">${h.error.slice(0,60)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Ranking list
+    if(rankingEl && data.rankings){
+      rankingEl.innerHTML = data.rankings.slice(0,6).map((r,i)=>{
+        const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : `${i+1}.`;
+        const scoreColor = r.score > 0.8 ? 'var(--green)' : r.score > 0.5 ? '#f59e0b' : '#d93a00';
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bg2)">
+            <div style="flex:1;min-width:0">
+              <b style="font-size:11px">${medal} ${r.provider_id}</b> <span style="font-size:9px;color:var(--text3)">${r.category}</span><br>
+              <span style="font-size:9px;color:var(--text2)">${r.success_count||0} OK • ${r.fail_count||0} FAIL • ${r.avg_latency_ms||0}ms avg • exp ${r.experience_points||0}</span>
+            </div>
+            <div style="text-align:right">
+              <span style="font-size:11px;font-weight:800;color:${scoreColor}">${(r.score*100).toFixed(0)}%</span><br>
+              <span style="font-size:8px;color:var(--text3)">rank #${r.rank}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Failover list
+    if(failoverEl && data.rankings){
+      const failovers = data.rankings.filter(r=> r.alternative_in_use || r.consecutive_fails > 0);
+      if(failovers.length){
+        failoverEl.innerHTML = failovers.map(r=>`
+          <div style="padding:6px 0;border-bottom:1px solid var(--bg2);font-size:11px">
+            <b>${r.provider_id}</b> → <span style="color:#d93a00">${r.alternative_in_use || 'sem alternativa'}</span><br>
+            <span style="font-size:9px;color:var(--text3)">${r.consecutive_fails||0} falhas consec. • status ${r.status}</span>
+          </div>
+        `).join('');
+      } else {
+        failoverEl.innerHTML = '<div style="color:var(--green);font-size:11px">✅ Nenhum failover ativo — todos OK</div>';
+      }
+    }
+  }catch(e){
+    console.error('provider health error', e);
+    const el=$('provider-health-grid');
+    if(el) el.innerHTML = `<div style="color:#d93a00">Erro: ${e.message}</div>`;
+  }
+}
 
 async function loadDataTab(){
   try{

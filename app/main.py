@@ -25,9 +25,10 @@ import app.tools.browser  # noqa
 import app.tools.site_builder  # noqa — construtor de apps/sites via chat
 import app.tools.news  # noqa — notícias Portugal | Mundo | Mercados | Crypto — REAL
 import app.tools.market_data  # noqa — ganhadores/perdedores Crypto e Ações — REAL
+import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
 
 # Import APIs
-from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
+from app.api import chat, tasks, agents, memory, approvals, system, market, businesses, providers
 
 # Inicializa DB
 init_db()
@@ -46,7 +47,7 @@ chat.set_orchestrator(orchestrator)
 
 app = FastAPI(
     title=settings.app_name,
-    description="GOD Cerebro Core — Orquestrador Universal de Agentes + Local AI Brain v1.0",
+    description="GOD Cerebro Core — Orquestrador Universal de Agentes + Local AI Brain v1.0 + Provider Health Ranking",
     version="1.0.0"
 )
 
@@ -68,6 +69,7 @@ app.include_router(memory.router, prefix="", tags=["memory"])
 app.include_router(approvals.router, prefix="", tags=["approvals"])
 app.include_router(market.router, prefix="", tags=["market — notícias e ganhadores/perdedores REAL"]) 
 app.include_router(businesses.router, prefix="", tags=["negócios — portfolio dos nossos negócios"])
+app.include_router(providers.router, prefix="", tags=["providers — health check, ranking e failover automático"])
 
 # Frontend static + workspace static — para preview de sites construídos via chat
 frontend_path = ROOT_DIR / "frontend"
@@ -104,11 +106,11 @@ def root():
         "dashboard": "/dashboard",
         "dashboard_direct": "/dashboard/",
         "health": "/health",
-        "architecture": "GOD Cerebro Core + Local AI Brain v1.0",
+        "architecture": "GOD Cerebro Core + Local AI Brain v1.0 + Provider Health Ranking",
         "agents": [a.agent_id for a in agent_registry.list_agents()],
         "tools": [t.id for t in tool_registry.list_available()],
         "frontend_exists": frontend_exists,
-        "message": "Abre /dashboard para app leve e bonita com DASHBOARD | CHAT | NEGOCIOS | DEFINIÇÕES"
+        "message": "Abre /dashboard para app leve e bonita com DASHBOARD | CHAT | NEGOCIOS | DEFINIÇÕES + auto-refresh + provider health ranking"
     }
 
 def main():
@@ -118,7 +120,14 @@ def main():
     print(f"Ollama: {settings.ollama_host} model={settings.ollama_model}")
     print(f"Agents: {[a.agent_id for a in agent_registry.list_agents()]}")
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
-    uvicorn.run("app.main:app", host=settings.app_host, port=getattr(settings, 'effective_port', settings.app_port), reload=False)
+    # Inicia scheduler para provider health checks periódicos
+    try:
+        from app.tools.scheduler import start_provider_health_scheduler
+        start_provider_health_scheduler()
+        print("Provider Health Scheduler iniciado — verifica providers a cada 5 min")
+    except Exception as e:
+        print(f"Scheduler não iniciado: {e}")
+    uvicorn.run("app.main:app", host=settings.app_host, port=port, reload=False)
 
 if __name__ == "__main__":
     main()
