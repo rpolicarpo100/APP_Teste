@@ -120,13 +120,17 @@ def main():
     print(f"Ollama: {settings.ollama_host} model={settings.ollama_model}")
     print(f"Agents: {[a.agent_id for a in agent_registry.list_agents()]}")
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
-    # Inicia scheduler para provider health checks periódicos
-    try:
-        from app.tools.scheduler import start_provider_health_scheduler
-        start_provider_health_scheduler()
-        print("Provider Health Scheduler iniciado — verifica providers a cada 5 min")
-    except Exception as e:
-        print(f"Scheduler não iniciado: {e}")
+    # Inicia scheduler para provider health checks periódicos — opcional, desativa no Render free se falhar
+    import os
+    if os.getenv('DISABLE_SCHEDULER') != 'true':
+        try:
+            from app.tools.scheduler import start_provider_health_scheduler
+            start_provider_health_scheduler()
+            print("Provider Health Scheduler iniciado — verifica providers a cada 5 min")
+        except Exception as e:
+            print(f"Scheduler não iniciado: {e}")
+    else:
+        print("Scheduler desativado via DISABLE_SCHEDULER=true")
     uvicorn.run("app.main:app", host=settings.app_host, port=port, reload=False)
 
 if __name__ == "__main__":

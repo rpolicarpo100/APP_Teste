@@ -21,5 +21,7 @@ services:
         value: 3.11.0
       - key: AUTONOMY_LEVEL
         value: 2
+      - key: DISABLE_SCHEDULER
+        value: true
       - key: SECRET_KEY
         generateValue: true
