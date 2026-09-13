@@ -4,7 +4,7 @@ VERIFICADO: Implementação baseada em pydantic-settings, conforme spec Local AI
 """
 from pydantic_settings import BaseSettings
 from pydantic import Field
-from typing import List
+from typing import List, Optional
 import os
 from pathlib import Path
 
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_host: str = Field(default="0.0.0.0")
     app_port: int = Field(default=8000)
     # Render e outros PaaS usam PORT
-    port: int | None = Field(default=None)  # fallback para PORT env
+    port: Optional[int] = Field(default=None)  # fallback para PORT env
 
     ollama_host: str = Field(default="http://127.0.0.1:11434")
     ollama_model: str = Field(default="qwen3:8b")
@@ -48,6 +48,7 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         extra = "ignore"
 
+    @property
     @property
     def effective_port(self) -> int:
         # Render define PORT, usa se APP_PORT não setado ou se PORT env existe
