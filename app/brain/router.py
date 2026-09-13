@@ -54,13 +54,17 @@ def init_default_agents():
         BuilderAgent()
     ]
     
-    # Provider Health opcional — não crasha se falhar
-    try:
-        from app.agents.provider_health import ProviderHealthAgent
-        agents.append(ProviderHealthAgent())
-        print("[Router] Provider Health Agent registado — 9 agentes")
-    except Exception as e:
-        print(f"[Router] Provider Health Agent não registado (opcional): {e} — continua com 8 agentes")
+    # Provider Health opcional — não crasha se falhar, desativa no Render via env var
+    import os
+    if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
+        try:
+            from app.agents.provider_health import ProviderHealthAgent
+            agents.append(ProviderHealthAgent())
+            print("[Router] Provider Health Agent registado — 9 agentes")
+        except Exception as e:
+            print(f"[Router] Provider Health Agent não registado (opcional): {e} — continua com 8 agentes")
+    else:
+        print("[Router] Provider Health desativado via DISABLE_PROVIDER_HEALTH=true — 8 agentes")
 
     for ag in agents:
         agent_registry.register(ag)

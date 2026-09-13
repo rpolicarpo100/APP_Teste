@@ -26,22 +26,30 @@ import app.tools.site_builder  # noqa — construtor de apps/sites via chat
 import app.tools.news  # noqa — notícias Portugal | Mundo | Mercados | Crypto — REAL
 import app.tools.market_data  # noqa — ganhadores/perdedores Crypto e Ações — REAL
 
-# Provider health tools opcional
-try:
-    import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
-    print("[Main] Provider Health tools registados")
-except Exception as e:
-    print(f"[Main] Provider Health tools não registados (opcional): {e}")
+# Provider health tools opcional — desativa no Render
+import os
+if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
+    try:
+        import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
+        print("[Main] Provider Health tools registados")
+    except Exception as e:
+        print(f"[Main] Provider Health tools não registados (opcional): {e}")
+else:
+    print("[Main] Provider Health tools desativados via DISABLE_PROVIDER_HEALTH=true")
 
 # Import APIs
 from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
 
-# Providers router opcional
-try:
-    from app.api import providers
-    providers_available = True
-except Exception as e:
-    print(f"[Main] Providers API não disponível: {e}")
+# Providers router opcional — desativa no Render
+if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
+    try:
+        from app.api import providers
+        providers_available = True
+    except Exception as e:
+        print(f"[Main] Providers API não disponível: {e}")
+        providers_available = False
+else:
+    print("[Main] Providers API desativada via DISABLE_PROVIDER_HEALTH=true")
     providers_available = False
 
 # Inicializa DB
