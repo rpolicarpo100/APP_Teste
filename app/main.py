@@ -113,11 +113,12 @@ def root():
 
 def main():
     settings.resolve_paths()
-    print(f"Starting {settings.app_name} on {settings.app_host}:{settings.app_port}")
+    port = getattr(settings, 'effective_port', settings.app_port)
+    print(f"Starting {settings.app_name} on {settings.app_host}:{port}")
     print(f"Ollama: {settings.ollama_host} model={settings.ollama_model}")
     print(f"Agents: {[a.agent_id for a in agent_registry.list_agents()]}")
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
-    uvicorn.run("app.main:app", host=settings.app_host, port=settings.app_port, reload=False)
+    uvicorn.run("app.main:app", host=settings.app_host, port=getattr(settings, 'effective_port', settings.app_port), reload=False)
 
 if __name__ == "__main__":
     main()
