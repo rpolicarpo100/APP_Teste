@@ -26,3 +26,7 @@ frontend/dist/
 playwright/
 deploy_key
 deploy_key.pub
+deploy/keys/*.key
+deploy/keys/github_deploy_key
+deploy/keys/*private*
+deploy_key
