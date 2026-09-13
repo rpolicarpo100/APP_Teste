@@ -1,0 +1,33 @@
+app = "ai-brain-god"
+primary_region = "mad" # Madrid perto de Lisboa
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  APP_HOST = "0.0.0.0"
+  APP_PORT = "8000"
+  AUTONOMY_LEVEL = "2"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+[[mounts]]
+  source = "ai_brain_data"
+  destination = "/app/data"

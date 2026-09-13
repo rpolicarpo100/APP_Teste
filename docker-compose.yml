@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  ai-brain:
+    build: .
+    container_name: ai-brain-god
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./frontend:/app/frontend:ro
+    environment:
+      - APP_ENV=production
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen3:8b
+      - AUTONOMY_LEVEL=2
+      - SECRET_KEY=change-me-in-prod
+      - CORS_ORIGINS=*
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Opcional: Ollama local para LLM real
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   restart: unless-stopped
+
+# volumes:
+#   ollama_data:

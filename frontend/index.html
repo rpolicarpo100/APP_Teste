@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRAIN — Dashboard | Chat | Negócios | Definições</title>
+<style>
+  :root{
+    --bg:#fbf9f6;
+    --bg2:#f5efe8;
+    --card:#ffffff;
+    --border:#efe6dc;
+    --border2:#e6d9cc;
+    --text:#1e1c1a;
+    --text2:#7a7068;
+    --text3:#a99e96;
+    --accent:#ff4d1a;
+    --accentSoft:#fff0eb;
+    --accentDark:#1e1c1a;
+    --green:#0e9f6e;
+    --greenSoft:#e6f5ef;
+    --blue:#2563eb;
+    --blueSoft:#e8efff;
+    --purple:#7c3aed;
+    --purpleSoft:#f0e8ff;
+    --yellow:#b45309;
+    --yellowSoft:#fef3c7;
+    --shadow:0 1px 2px rgba(30,28,26,0.04),0 4px 16px rgba(30,28,26,0.06);
+    --shadowLg:0 12px 40px rgba(30,28,26,0.08),0 4px 12px rgba(30,28,26,0.05);
+    --r:20px;
+    --rSm:14px;
+    --rFull:999px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:ui-sans-system, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    height:100vh;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;flex-direction:column;height:100vh}
+
+  /* TOP NAV - DASHBOARD | CHAT | NEGOCIOS | DEFINICOES */
+  .topbar{
+    height:64px;
+    background:rgba(255,255,255,0.9);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 28px;
+    position:sticky;
+    top:0;
+    z-index:100;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    width:36px;height:36px;
+    background:var(--accentDark);
+    color:white;
+    border-radius:10px;
+    display:grid;place-items:center;
+    font-weight:800;
+    font-size:14px;
+    letter-spacing:-0.5px;
+  }
+  .brand-text{line-height:1}
+  .brand-text b{font-size:15px;letter-spacing:-0.3px;display:block}
+  .brand-text span{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+
+  .tabs{
+    display:flex;
+    align-items:center;
+    background:var(--bg2);
+    border:1px solid var(--border);
+    border-radius:var(--rFull);
+    padding:4px;
+    gap:2px;
+  }
+  .tab{
+    padding:9px 18px;
+    border-radius:var(--rFull);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.2px;
+    cursor:pointer;
+    color:var(--text2);
+    transition:all .2s ease;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    white-space:nowrap;
+  }
+  .tab:hover{color:var(--text);background:rgba(255,255,255,0.6)}
+  .tab.active{
+    background:var(--accentDark);
+    color:white;
+    box-shadow:0 2px 8px rgba(30,28,26,0.15);
+  }
+  .tab .dot{
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--accent);
+    display:none;
+  }
+  .tab.active .dot{display:block;background:white}
+
+  .top-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .pill{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--rFull);
+    font-size:11px;
+    font-weight:700;
+    box-shadow:var(--shadow);
+  }
+  .pill-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--greenSoft)}
+  .pill-dot.off{background:var(--text3);box-shadow:0 0 0 3px var(--bg2)}
+
+  /* MAIN */
+  .main{
+    flex:1;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .page{
+    flex:1;
+    overflow-y:auto;
+    padding:28px;
+  }
+  .page::-webkit-scrollbar{width:6px}
+  .page::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+  .hidden{display:none !important}
+  .container{max-width:1120px;margin:0 auto;width:100%}
+
+  /* DASHBOARD */
+  .hero{
+    background:var(--accentDark);
+    color:white;
+    border-radius:var(--r);
+    padding:28px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:20px;
+    position:relative;
+    overflow:hidden;
+    margin-bottom:20px;
+  }
+  .hero::after{
+    content:'';
+    position:absolute;
+    top:-40px;right:-40px;
+    width:300px;height:300px;
+    background:radial-gradient(circle, rgba(255,77,26,0.3) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.1;margin-bottom:6px}
+  .hero p{font-size:13px;color:rgba(255,255,255,0.6);max-width:460px;line-height:1.5}
+  .hero-actions{display:flex;gap:8px;flex-shrink:0}
+  .btn{
+    padding:11px 18px;
+    border-radius:12px;
+    border:none;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    transition:all .2s;
+    display:flex;align-items:center;gap:6px;
+  }
+  .btn-light{background:white;color:var(--accentDark)}
+  .btn-light:hover{background:#f5f5f5;transform:translateY(-1px)}
+  .btn-dark{background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.15)}
+  .btn-dark:hover{background:rgba(255,255,255,0.18)}
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .stat{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--r);
+    padding:18px;
+    box-shadow:var(--shadow);
+  }
+  .stat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .stat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:16px}
+  .stat:nth-child(1) .stat-icon{background:var(--accentSoft);color:var(--accent)}
+  .stat:nth-child(2) .stat-icon{background:var(--blueSoft);color:var(--blue)}
+  .stat:nth-child(3) .stat-icon{background:var(--purpleSoft);color:var(--purple)}
+  .stat:nth-child(4) .stat-icon{background:var(--greenSoft);color:var(--green)}
+  .stat b{font-size:24px;letter-spacing:-0.5px;display:block}
+  .stat span{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+  .grid2{display:grid;grid-template-columns:1.4fr 0.8fr;gap:14px}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--r);
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .card h3{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:var(--text2);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+  .card h3 a{font-size:11px;color:var(--accent);text-decoration:none;font-weight:700}
+  .task-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid var(--bg2);
+    gap:12px;
+  }
+  .task-item:last-child{border:none}
+  .task-item-left{flex:1;min-width:0}
+  .task-item-left strong{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .task-item-left .meta{font-size:11px;color:var(--text3);margin-top:2px}
+  .status{
+    padding:4px 9px;
+    border-radius:20px;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:0.4px;
+    text-transform:uppercase;
+    border:1px solid;
+    white-space:nowrap;
+  }
+  .status.PENDING{background:var(--bg2);color:var(--text2);border-color:var(--border)}
+  .status.COMPLETED{background:var(--greenSoft);color:var(--green);border-color:#b8e6d5}
+  .status.RUNNING{background:var(--yellowSoft);color:var(--yellow);border-color:#fde68a}
+  .status.FAILED{background:#ffe8e8;color:#d93a00;border-color:#ffcccc}
+  .status.BLOCKED{background:var(--purpleSoft);color:var(--purple);border-color:#e0c2ff}
+  .status.READY{background:var(--blueSoft);color:var(--blue);border-color:#bfdbfe}
+
+  .agent-list{display:flex;flex-direction:column;gap:10px}
+  .agent-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .agent-row .ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:14px}
+  .agent-row b{font-size:13px}
+  .agent-row span{font-size:11px;color:var(--text2)}
+  .agent-row .right{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .green-dot{width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 0 3px var(--greenSoft)}
+
+  /* CHAT */
+  .chat-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;height:100%}
+  .chat-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding:10px 0 20px}
+  .msg-row{display:flex;gap:10px;max-width:85%;animation:slide .25s ease}
+  @keyframes slide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .msg-row.user{align-self:flex-end;flex-direction:row-reverse}
+  .msg-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+  .msg-avatar.bot{background:var(--accentDark);color:white}
+  .msg-avatar.you{background:var(--accentSoft);color:var(--accent);border:1px solid #ffd5c4}
+  .msg-bubble{padding:13px 16px;border-radius:18px;font-size:13.5px;line-height:1.6}
+  .msg-row.bot .msg-bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:6px;box-shadow:var(--shadow)}
+  .msg-row.user .msg-bubble{background:var(--accentDark);color:white;border-bottom-right-radius:6px}
+  .msg-meta{font-size:10px;color:var(--text3);margin-top:5px}
+  .msg-row.user .msg-meta{color:rgba(255,255,255,0.5);text-align:right}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0 42px}
+  .quick-btn{padding:7px 12px;background:var(--card);border:1px solid var(--border);border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2)}
+  .quick-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accentSoft)}
+  .chat-input{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:8px 8px 8px 18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    box-shadow:var(--shadowLg);
+  }
+  .chat-input:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--accentSoft), var(--shadowLg)}
+  .chat-input input{flex:1;border:none;outline:none;font-size:13.5px;background:transparent;font-family:inherit}
+  .send{width:38px;height:38px;border-radius:50%;border:none;background:var(--accent);color:white;display:grid;place-items:center;cursor:pointer;font-weight:800}
+  .send:hover{background:var(--accentDark)}
+
+  /* NEGOCIOS */
+  .negocios-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .biz-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--r);
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .biz-card h3{font-size:14px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .biz-card p{font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.4}
+  .field{margin-bottom:12px}
+  .field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);display:block;margin-bottom:6px}
+  .field input, .field textarea, .field select{
+    width:100%;
+    padding:11px 14px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:13px;
+    font-family:inherit;
+    background:var(--bg);
+    outline:none;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft);background:var(--card)}
+  .field textarea{resize:vertical;min-height:80px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .result-box{
+    background:var(--bg);
+    border:1px dashed var(--border2);
+    border-radius:12px;
+    padding:14px;
+    font-size:12px;
+    line-height:1.5;
+    margin-top:12px;
+    white-space:pre-wrap;
+  }
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  .kpi{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+  .kpi b{font-size:18px;display:block}
+  .kpi span{font-size:10px;color:var(--text2);text-transform:uppercase;font-weight:700;letter-spacing:0.5px}
+
+  /* DEFINICOES */
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:900px}
+  .settings-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+  .settings-card h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:var(--text2);margin-bottom:14px}
+  pre{
+    background:var(--bg2);
+    border:1px solid var(--border);
+    padding:12px;
+    border-radius:10px;
+    font-size:11px;
+    line-height:1.5;
+    font-family:ui-monospace, monospace;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
+  @media(max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .negocios-grid{grid-template-columns:1fr}
+    .settings-grid{grid-template-columns:1fr}
+    .topbar{padding:0 16px}
+    .tabs .tab{padding:8px 12px;font-size:12px}
+  }
+  @media(max-width:600px){
+    .topbar{height:auto;padding:12px 16px;flex-direction:column;gap:10px;align-items:stretch}
+    .tabs{overflow-x:auto}
+    .hero{flex-direction:column;align-items:stretch}
+    .page{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div class="brand-text"><b>BRAIN</b><span>Leve & Bonita • Local</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-page="dashboard"><span class="dot"></span> DASHBOARD</div>
+      <div class="tab" data-page="chat"><span class="dot"></span> CHAT</div>
+      <div class="tab" data-page="negocios"><span class="dot"></span> NEGÓCIOS</div>
+      <div class="tab" data-page="definicoes"><span class="dot"></span> DEFINIÇÕES</div>
+    </div>
+
+    <div class="top-actions">
+      <div class="pill"><span class="pill-dot" id="status-dot"></span> <span id="status-text">Local</span></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--accentDark);color:white;display:grid;place-items:center;font-size:11px;font-weight:800">TU</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page">
+      <div class="container">
+        <div class="hero">
+          <div>
+            <h1 id="hero-title">Bom dia — vamos criar algo bonito?</h1>
+            <p id="hero-sub">App leve no teu PC, sem cloud, sem tokens. 8 agentes prontos para investigar, desenhar, programar e analisar negócio.</p>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-light" onclick="switchTab('chat')">💬 Falar com Brain</button>
+            <button class="btn btn-dark" onclick="switchTab('negocios')">📊 Novo negócio</button>
+          </div>
+        </div>
+
+        <div class="stats" id="stats">
+          <div class="stat"><div class="stat-top"><div class="stat-icon">✦</div><span style="font-size:10px;color:var(--text3)">HOJE</span></div><b id="stat-missoes">0</b><span>Missões criadas</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon">◍</div><span style="font-size:10px;color:var(--green)">● ONLINE</span></div><b>8</b><span>Agentes prontos</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon">⚙</div><span style="font-size:10px;color:var(--text3)">LOCAL</span></div><b>10</b><span>Ferramentas</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon">♡</div><span style="font-size:10px;color:var(--text3)">MEMÓRIA</span></div><b id="stat-mem">0</b><span>Memórias guardadas</span></div>
+        </div>
+
+        <!-- NOTICIAS DO DIA -->
+        <div class="card" style="margin-bottom:14px">
+          <h3>📰 Notícias do dia <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text3)">Portugal | Mundo | Mercados | Crypto — fontes reais e fiáveis</span> <a href="#" onclick="loadNews();loadMarket();return false">↻ Actualizar</a></h3>
+          <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+            <button class="btn news-tab active" data-news="portugal" onclick="switchNews('portugal')" style="padding:7px 12px;font-size:11px;background:var(--accentDark);color:white">🇵🇹 Portugal</button>
+            <button class="btn news-tab" data-news="world" onclick="switchNews('world')" style="padding:7px 12px;font-size:11px;background:var(--bg2);border:1px solid var(--border)">🌍 Mundo</button>
+            <button class="btn news-tab" data-news="markets" onclick="switchNews('markets')" style="padding:7px 12px;font-size:11px;background:var(--bg2);border:1px solid var(--border)">📈 Mercados</button>
+            <button class="btn news-tab" data-news="crypto" onclick="switchNews('crypto')" style="padding:7px 12px;font-size:11px;background:var(--bg2);border:1px solid var(--border)">₿ Crypto</button>
+          </div>
+          <div id="news-portugal" class="news-panel"></div>
+          <div id="news-world" class="news-panel hidden"></div>
+          <div id="news-markets" class="news-panel hidden"></div>
+          <div id="news-crypto" class="news-panel hidden"></div>
+          <div style="margin-top:10px;font-size:10px;color:var(--text3)">Fontes: Google News RSS PT (gratuito, sem key) + CoinDesk/CoinTelegraph RSS + BBC — testadas e validadas • Actualizado: <span id="news-time">—</span></div>
+        </div>
+
+        <!-- GANHADORES E PERDEDORES -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div class="card">
+            <h3>₿ Crypto — Ganhadores e Perdedores 24h <a href="#" onclick="loadMarket();return false">↻</a></h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <div style="font-size:11px;font-weight:800;color:var(--green);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">🚀 Ganhadores</div>
+                <div id="crypto-gainers">A carregar...</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:800;color:#d93a00;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">📉 Perdedores</div>
+                <div id="crypto-losers">A carregar...</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text3)">Fonte: CoinGecko API v3 — gratuito, sem key, top 100 ordenado por 24h% — fiável • <span id="crypto-time">—</span></div>
+          </div>
+
+          <div class="card">
+            <h3>📈 Ações — Ganhadores e Perdedores 24h <a href="#" onclick="loadMarket();return false">↻</a></h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <div style="font-size:11px;font-weight:800;color:var(--green);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">🚀 Ganhadores</div>
+                <div id="stocks-gainers">A carregar...</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:800;color:#d93a00;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">📉 Perdedores</div>
+                <div id="stocks-losers">A carregar...</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text3)">Fonte: Yahoo Finance Chart API v8 — gratuito, sem key — 20 símbolos (AAPL, NVDA, PSI-20 EDP.LS etc) • <span id="stocks-time">—</span></div>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <h3>Missões recentes <a href="#" onclick="switchTab('chat');return false">Ver todas →</a></h3>
+            <div id="dashboard-tasks">A carregar missões...</div>
+          </div>
+          <div class="card">
+            <h3>Agentes</h3>
+            <div class="agent-list" id="dashboard-agents">A carregar...</div>
+            <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:12px" onclick="quickMission('Pesquisar ferramentas gratuitas de trading')">🔍 Research</button>
+              <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:12px" onclick="quickMission('Criar design para landing page minimalista')">🎨 Design</button>
+            </div>
+            <div style="margin-top:12px">
+              <button class="btn" style="background:var(--accentSoft);border:1px solid #ffd5c4;color:var(--accent);width:100%;justify-content:center;font-size:12px" onclick="quickMission('Cria um site de trading minimalista e bonito')">✦ Criar site via chat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="page-chat" class="page hidden">
+      <div class="chat-wrap">
+        <div class="chat-area" id="chat-area">
+          <div class="msg-row bot">
+            <div class="msg-avatar bot">B</div>
+            <div>
+              <div class="msg-bubble">Olá! Sou o teu Brain — leve, bonito e 100% local. 🧡<br><br>Estou em <b>DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES</b> como pediste.<br><br>Posso:<br>• <b>CHAT</b> — conversar e orquestrar<br>• <b>NEGÓCIOS</b> — calcular margens, analisar mercado, criar modelo de negócio<br>• <b>DASHBOARD</b> — ver tudo<br>• <b>DEFINIÇÕES</b> — configurar<br><br>O que vamos fazer?</div>
+              <div class="msg-meta">Brain • agora</div>
+              <div class="quick">
+                <div class="quick-btn" onclick="quick('Pesquisar ferramentas gratuitas de trading')">🔍 Pesquisar</div>
+                <div class="quick-btn" onclick="quick('Criar design para landing page')">🎨 Design</div>
+                <div class="quick-btn" onclick="switchTab('negocios')">📊 Negócios</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input">
+          <input id="chat-input" placeholder="Escreve aqui... ex: Analisar negócio de loja online" />
+          <button class="send" id="send-btn">↗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEGOCIOS — OS NOSSOS NEGÓCIOS -->
+    <div id="page-negocios" class="page hidden">
+      <div class="container">
+        <!-- Header Portfolio -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+          <div>
+            <h1 style="font-size:26px;letter-spacing:-0.6px;margin-bottom:6px">Os Nossos Negócios</h1>
+            <p style="color:var(--text2);font-size:13px">Portfolio real — cada negócio com receita, custos, margem, missões e sites. Dados guardados em SQLite.</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" style="background:var(--accentDark);color:white" onclick="openBusinessModal()">+ Novo Negócio</button>
+            <button class="btn" style="background:var(--card);border:1px solid var(--border)" onclick="loadBusinesses()">↻ Actualizar</button>
+          </div>
+        </div>
+
+        <!-- KPIs Globais -->
+        <div class="stats" style="margin-bottom:18px">
+          <div class="stat"><div class="stat-top"><div class="stat-icon">🏢</div><span style="font-size:10px;color:var(--text3)">PORTFOLIO</span></div><b id="biz-kpi-total">0</b><span>Negócios</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--greenSoft);color:var(--green)">💰</div><span style="font-size:10px;color:var(--green)">RECEITA</span></div><b id="biz-kpi-revenue">€0</b><span>Receita mensal total</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:#ffe8e8;color:#d93a00">📉</div><span style="font-size:10px;color:var(--text3)">CUSTOS</span></div><b id="biz-kpi-costs">€0</b><span>Custos mensais total</span></div>
+          <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--blueSoft);color:var(--blue)">📈</div><span style="font-size:10px;color:var(--text3)">LUCRO</span></div><b id="biz-kpi-profit">€0</b><span>Lucro + margem média</span></div>
+        </div>
+
+        <!-- Grid Negócios -->
+        <div id="businesses-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:20px">
+          <div style="padding:30px;text-align:center;color:var(--text3);grid-column:1/-1">A carregar negócios...</div>
+        </div>
+
+        <!-- Detalhe Negócio Selecionado -->
+        <div id="business-detail" class="hidden">
+          <div class="card" style="margin-bottom:14px;border:2px solid var(--accentDark)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+              <h3 style="margin:0">🏢 <span id="detail-name">—</span> <span id="detail-status" class="status READY" style="margin-left:8px;font-size:9px">—</span></h3>
+              <div style="display:flex;gap:6px">
+                <button class="btn" style="padding:6px 10px;font-size:11px;background:var(--bg2);border:1px solid var(--border)" onclick="editCurrentBusiness()">✏️ Editar</button>
+                <button class="btn" style="padding:6px 10px;font-size:11px;background:var(--bg2);border:1px solid var(--border)" onclick="$('business-detail').classList.add('hidden')">✕ Fechar</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:14px">
+              <div>
+                <div class="kpi-grid" style="margin-top:0">
+                  <div class="kpi"><b id="detail-revenue">€0</b><span>Receita/mês</span></div>
+                  <div class="kpi"><b id="detail-costs">€0</b><span>Custos/mês</span></div>
+                  <div class="kpi"><b id="detail-profit">€0</b><span>Lucro/mês</span></div>
+                  <div class="kpi"><b id="detail-margin">0%</b><span>Margem</span></div>
+                  <div class="kpi"><b id="detail-missions">0</b><span>Missões</span></div>
+                  <div class="kpi"><b id="detail-tasks">0</b><span>Tasks</span></div>
+                </div>
+                <div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px">
+                  <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:6px">Descrição</div>
+                  <div id="detail-desc" style="font-size:13px;line-height:1.5">—</div>
+                  <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+                    <span id="detail-sector" style="font-size:10px;padding:4px 8px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)">—</span>
+                    <span id="detail-website" style="font-size:10px"></span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px">Missões ligadas</div>
+                <div id="detail-missions-list" style="max-height:220px;overflow-y:auto">—</div>
+                <div style="margin-top:12px;display:flex;gap:6px">
+                  <button class="btn" style="background:var(--accentDark);color:white;font-size:11px;padding:7px 10px;flex:1" onclick="criarMissaoParaNegocio()">+ Missão para este negócio</button>
+                  <button class="btn" style="background:var(--accentSoft);border:1px solid #ffd5c4;color:var(--accent);font-size:11px;padding:7px 10px;flex:1" onclick="criarSiteParaNegocio()">✦ Criar site</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ferramentas por Negócio — só Modelo + Missões (Calculadora e Concorrência removidas a pedido) -->
+        <div class="negocios-grid">
+          <div class="biz-card">
+            <h3>📊 Modelo de Negócio</h3>
+            <p>Cria missão real com Business Agent — ligada ao negócio selecionado.</p>
+            <div class="field"><label>Negócio alvo</label><select id="biz-select"><option value="">— novo negócio / sem ligação —</option></select></div>
+            <div class="field"><label>Ideia / Produto</label><input id="biz-ideia" placeholder="Ex: Loja de ferramentas trading gratuitas"></div>
+            <div class="field"><label>Proposta de valor</label><textarea id="biz-valor" placeholder="Ex: Curadoria de ferramentas gratuitas verificadas"></textarea></div>
+            <div class="row2">
+              <div class="field"><label>Segmento cliente</label><input id="biz-segmento" placeholder="Traders iniciantes"></div>
+              <div class="field"><label>Canal</label><input id="biz-canal" placeholder="Online, SEO, YouTube"></div>
+            </div>
+            <button class="btn" style="background:var(--accentDark);color:white;width:100%;justify-content:center" onclick="criarNegocio()">Criar análise de negócio</button>
+            <div class="result-box" id="biz-result">Vai criar missão real ligada ao negócio — com distinção VERIFICADO vs ESTIMATIVA.</div>
+          </div>
+
+          <div class="biz-card">
+            <h3>📈 Missões de Negócio Recentes</h3>
+            <p>Últimas análises criadas — com estado REAL.</p>
+            <div id="biz-missoes">A carregar...</div>
+            <button class="btn" style="background:var(--bg2);border:1px solid var(--border);width:100%;justify-content:center;margin-top:12px" onclick="loadBizMissoes()">↻ Actualizar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Novo/Editar Negócio -->
+      <div id="business-modal" class="hidden" style="position:fixed;inset:0;background:rgba(30,28,26,0.5);backdrop-filter:blur(8px);z-index:200;display:grid;place-items:center;padding:20px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:520px;box-shadow:var(--shadowLg);max-height:90vh;overflow-y:auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h3 style="font-size:16px;font-weight:800" id="modal-title">+ Novo Negócio</h3>
+            <button class="btn" style="padding:6px 10px;background:var(--bg2);border:1px solid var(--border)" onclick="closeBusinessModal()">✕</button>
+          </div>
+          <div class="field"><label>Nome do negócio *</label><input id="m-name" placeholder="Ex: Trading Tools PT"></div>
+          <div class="row2">
+            <div class="field"><label>Setor</label><input id="m-sector" placeholder="Ex: Finanças, E-commerce"></div>
+            <div class="field"><label>Estado</label><select id="m-status"><option value="ideia">💡 Ideia</option><option value="validacao">🔍 Validação</option><option value="ativo" selected>✅ Ativo</option><option value="pausado">⏸️ Pausado</option><option value="vendido">💰 Vendido</option><option value="arquivado">📦 Arquivado</option></select></div>
+          </div>
+          <div class="field"><label>Descrição</label><textarea id="m-desc" placeholder="O que faz este negócio?"></textarea></div>
+          <div class="row2">
+            <div class="field"><label>Receita mensal (€)</label><input id="m-revenue" type="number" placeholder="0" value="0"></div>
+            <div class="field"><label>Custos mensais (€)</label><input id="m-costs" type="number" placeholder="0" value="0"></div>
+          </div>
+          <div class="field"><label>Proposta de valor</label><input id="m-value" placeholder="Ex: Ferramentas gratuitas verificadas"></div>
+          <div class="row2">
+            <div class="field"><label>Segmento cliente</label><input id="m-segment" placeholder="Ex: Traders iniciantes"></div>
+            <div class="field"><label>Canal</label><input id="m-channel" placeholder="Ex: SEO, YouTube"></div>
+          </div>
+          <div class="field"><label>Website URL</label><input id="m-website" placeholder="https://..."></div>
+          <div class="field"><label>Tags (vírgula)</label><input id="m-tags" placeholder="trading, gratuito, portugal"></div>
+          <div class="field"><label>Notas internas</label><textarea id="m-notes" placeholder="Notas..."></textarea></div>
+          <button class="btn" style="background:var(--accentDark);color:white;width:100%;justify-content:center;margin-top:12px" onclick="saveBusiness()">💾 Guardar negócio</button>
+          <div id="m-result" style="margin-top:10px;font-size:11px;color:var(--text3)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFINICOES -->
+    <div id="page-definicoes" class="page hidden">
+      <div class="container">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+          <div>
+            <h1 style="font-size:26px;letter-spacing:-0.6px;margin-bottom:6px">Definições</h1>
+            <p style="color:var(--text2);font-size:13px">App leve, sem cloud. Tudo configurável no teu PC — dividido por tabs.</p>
+          </div>
+          <button class="btn" style="background:var(--card);border:1px solid var(--border)" onclick="loadSystem();loadNetwork();loadDataTab();loadBusinesses();loadDashboard()">↻ Actualizar tudo</button>
+        </div>
+
+        <!-- Tabs Definições -->
+        <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap">
+          <button class="btn def-tab active" data-def="geral" onclick="switchDefTab('geral')" style="padding:8px 14px;font-size:12px;background:var(--accentDark);color:white">🖥️ Geral</button>
+          <button class="btn def-tab" data-def="network" onclick="switchDefTab('network')" style="padding:8px 14px;font-size:12px;background:var(--bg2);border:1px solid var(--border)">🌐 Network + KPIs</button>
+          <button class="btn def-tab" data-def="ai" onclick="switchDefTab('ai')" style="padding:8px 14px;font-size:12px;background:var(--bg2);border:1px solid var(--border)">🧠 AI / Ollama</button>
+          <button class="btn def-tab" data-def="security" onclick="switchDefTab('security')" style="padding:8px 14px;font-size:12px;background:var(--bg2);border:1px solid var(--border)">🔒 Segurança</button>
+          <button class="btn def-tab" data-def="data" onclick="switchDefTab('data')" style="padding:8px 14px;font-size:12px;background:var(--bg2);border:1px solid var(--border)">📁 Dados & Pastas</button>
+        </div>
+
+        <!-- GERAL -->
+        <div id="def-geral" class="def-panel">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>🖥️ Sistema — Estado Geral</h3>
+              <pre id="system-status">A carregar...</pre>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:12px" onclick="loadSystem()">↻ Refresh</button>
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:12px" onclick="window.open('/docs','_blank')">📄 API Docs</button>
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:12px" onclick="window.open('/','_blank')">🏠 API Root</button>
+              </div>
+            </div>
+            <div class="settings-card">
+              <h3>⚡ Quick Stats</h3>
+              <div id="def-geral-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center"><b id="def-stat-agents">—</b><br><span style="font-size:10px;color:var(--text2);text-transform:uppercase">Agentes</span></div>
+                <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center"><b id="def-stat-tools">—</b><br><span style="font-size:10px;color:var(--text2);text-transform:uppercase">Ferramentas</span></div>
+                <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center"><b id="def-stat-missions">—</b><br><span style="font-size:10px;color:var(--text2);text-transform:uppercase">Missões</span></div>
+                <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center"><b id="def-stat-businesses">—</b><br><span style="font-size:10px;color:var(--text2);text-transform:uppercase">Negócios</span></div>
+              </div>
+              <div style="margin-top:12px">
+                <div class="field"><label>Nível autonomia actual</label><input id="autonomy-level" value="2" disabled></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NETWORK + KPIs — COM AGENTES E ORQUESTRADOR -->
+        <div id="def-network" class="def-panel hidden">
+          <div class="card" style="margin-bottom:14px;background:var(--accentDark);color:white;border:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+              <div>
+                <h3 style="color:white;margin:0;font-size:14px">🌐 Network do Site — KPIs + Agentes + Orquestrador</h3>
+                <p style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:4px">Fluxo completo: User → FastAPI → Orchestrator → Agentes → Executor → Tools → APIs externas — tudo REAL</p>
+              </div>
+              <button class="btn btn-light" style="padding:8px 14px;font-size:12px" onclick="loadNetwork()">↻ Testar Network Agora</button>
+            </div>
+          </div>
+
+          <div class="stats" style="margin-bottom:14px">
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--greenSoft);color:var(--green)">⚡</div><span style="font-size:10px;color:var(--green)">LATÊNCIA</span></div><b id="net-kpi-latency">—</b><span>Check total ms</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--blueSoft);color:var(--blue)">🗄️</div><span style="font-size:10px;color:var(--text3)">DB</span></div><b id="net-kpi-db">—</b><span>Tamanho MB + registos</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--purpleSoft);color:var(--purple)">🌐</div><span style="font-size:10px;color:var(--text3)">EXTERNAS</span></div><b id="net-kpi-ext">—</b><span>APIs OK / total</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--accentSoft);color:var(--accent)">🤖</div><span style="font-size:10px;color:var(--text3)">AGENTES</span></div><b id="net-kpi-agents">—</b><span>8 agentes + 21 tools</span></div>
+          </div>
+
+          <!-- ORQUESTRADOR FLOW -->
+          <div class="card" style="margin-bottom:14px;border:2px solid var(--accentDark)">
+            <h3>🧠 Orquestrador — GOD Cerebro Core — Fluxo Real</h3>
+            <div id="net-orchestrator-flow" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-bottom:12px">A carregar fluxo...</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Componentes</div>
+                <div id="net-orchestrator-components" style="font-size:11px;line-height:1.6">—</div>
+              </div>
+              <div>
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Visual Flow</div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:monospace;font-size:11px;line-height:1.8">
+                  <div>👤 User → 📡 FastAPI</div>
+                  <div>📡 → 🧠 <b>Orchestrator</b></div>
+                  <div>🧠 → 📋 Mission Intake</div>
+                  <div>📋 → 🗺️ Planner + Task Graph</div>
+                  <div>🗺️ → 🤖 Agent Registry (8)</div>
+                  <div>🤖 → ⚙️ Executor</div>
+                  <div>⚙️ → 🛠️ Tool Registry (21) + 🔒 Permissions</div>
+                  <div>🛠️ → 🌐 External APIs / 💾 Filesystem</div>
+                  <div>→ ✅ Validation Audit Core</div>
+                  <div>→ 💾 Project Memory (SQLite)</div>
+                  <div>→ 💬 Response</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VISUAL NETWORK GRAPH — REDE INTERNA REAL -->
+          <div class="card" style="margin-bottom:14px;border:2px solid var(--accentDark);overflow:hidden">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+              <h3 style="margin:0">🕸️ Rede Interna Visual — Grafo Real de Agentes + Tools</h3>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span style="font-size:10px;color:var(--text3)">Legenda:</span>
+                <span style="font-size:10px;background:var(--accentDark);color:white;padding:3px 8px;border-radius:20px">🧠 Orquestrador</span>
+                <span style="font-size:10px;background:var(--card);border:1px solid var(--border);padding:3px 8px;border-radius:20px">🤖 Agente</span>
+                <span style="font-size:10px;background:var(--bg);border:1px dashed var(--border);padding:3px 8px;border-radius:20px">🛠️ Tool</span>
+              </div>
+            </div>
+            <div id="net-visual-graph" style="width:100%;height:520px;background:var(--bg);border:1px solid var(--border);border-radius:14px;position:relative;overflow:hidden;display:grid;place-items:center">
+              <div style="color:var(--text3);font-size:12px">A gerar grafo da rede interna...</div>
+            </div>
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text2)">
+              <span>• Centro = GOD Cerebro Core (Orchestrator)</span>
+              <span>• Círculo interno = 8 Agentes (Research, Coding, Design, Business, Browser, Automation, Monitor, Builder)</span>
+              <span>• Círculo externo = 21 Tools por categoria</span>
+              <span>• Linhas = Conexões reais validadas pelo Tool Registry</span>
+            </div>
+          </div>
+
+          <!-- AGENTES NETWORK -->
+          <div class="card" style="margin-bottom:14px">
+            <h3>🤖 Agentes — Rede Interna <span id="net-agents-count" style="font-weight:400;text-transform:none;font-size:10px;color:var(--text3)">—</span></h3>
+            <div id="net-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">A carregar agentes...</div>
+          </div>
+
+          <!-- TOOLS NETWORK -->
+          <div class="card" style="margin-bottom:14px">
+            <h3>🛠️ Tools — Por Categoria <span id="net-tools-count" style="font-weight:400;text-transform:none;font-size:10px;color:var(--text3)">—</span></h3>
+            <div id="net-tools-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">A carregar tools...</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="card">
+              <h3>🔌 APIs Externas — Saúde Real <span id="net-time" style="font-weight:400;text-transform:none;font-size:10px;color:var(--text3)">—</span></h3>
+              <div id="net-external">A carregar testes reais...</div>
+              <div style="margin-top:10px;font-size:10px;color:var(--text3)">Testa CoinGecko, Yahoo Finance, Google News RSS, CoinDesk RSS — latência real com httpx 8s timeout</div>
+            </div>
+            <div class="card">
+              <h3>🏠 APIs Internas + DB</h3>
+              <div id="net-internal">A carregar...</div>
+              <div style="margin-top:12px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">DB Counts</div>
+                <div id="net-db-counts" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">—</div>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:6px">
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:11px;flex:1" onclick="apiFetch('/businesses').then(d=>alert('Negócios: '+d.count))">📊 Negócios</button>
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:11px;flex:1" onclick="apiFetch('/news/portugal?count=1').then(d=>alert('News: '+d.source_name))">📰 News</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <h3>📈 Endpoints do Site — Mapa Network Completo</h3>
+            <div id="net-map" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">—</div>
+          </div>
+        </div>
+
+        <!-- AI / OLLAMA -->
+        <div id="def-ai" class="def-panel hidden">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>🧠 Ollama (LLM Local)</h3>
+              <pre id="ollama-info">Ollama é opcional — modo leve funciona sem ele.
+              
+Para chat mais bonito:
+1. Instala https://ollama.com
+2. ollama pull qwen3:8b
+3. No .env:
+OLLAMA_HOST=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3:8b
+
+Sem Ollama: fallback local, sem tokens pagos.</pre>
+              <div style="margin-top:12px">
+                <div class="field"><label>Host</label><input value="http://127.0.0.1:11434" disabled></div>
+                <div class="field"><label>Modelo</label><input value="qwen3:8b" disabled></div>
+              </div>
+            </div>
+            <div class="settings-card">
+              <h3>🤖 Agentes & Ferramentas</h3>
+              <div id="def-ai-agents">A carregar agentes...</div>
+              <div id="def-ai-tools" style="margin-top:12px">A carregar tools...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY -->
+        <div id="def-security" class="def-panel hidden">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>🔒 Segurança & Autonomia</h3>
+              <pre>Autonomia:
+0 = Só chat
+1 = Pode pesquisar
+2 = Pode usar ferramentas seguras (actual)
+3 = Pode automatizar
+4 = Autónomo com aprovação
+
+Segurança:
+• LLM não controla PC — Brain decide
+• Research não pode apagar
+• python.execute requer aprovação
+• Path só data/workspace, app/ leitura
+• Prompt injection detection
+• Tool permissions LOW/MEDIUM/HIGH
+• Audit logs em data/logs/</pre>
+              <div class="field" style="margin-top:12px"><label>Nível autonomia actual</label><input id="autonomy-level-2" value="2" disabled></div>
+            </div>
+            <div class="settings-card">
+              <h3>📜 Audit Logs Recentes</h3>
+              <div id="def-audit-logs" style="max-height:300px;overflow-y:auto;font-size:11px">A carregar logs...</div>
+              <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:11px;margin-top:10px;width:100%" onclick="loadAuditLogs()">↻ Carregar logs</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATA — ENHANCED COM DADOS REAIS + ATUALIZAR -->
+        <div id="def-data" class="def-panel hidden">
+          <div class="card" style="margin-bottom:14px;background:var(--accentDark);color:white;border:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+              <div>
+                <h3 style="color:white;margin:0;font-size:14px">💾 Dados Reais — Gestão Local</h3>
+                <p style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:4px">Tudo local em data/brain.db + data/workspace/ — sem cloud, exportável, leve</p>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-light" style="padding:8px 14px;font-size:12px" onclick="loadDataTab()">↻ Actualizar Dados Agora</button>
+                <button class="btn" style="padding:8px 14px;font-size:12px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.2)" onclick="exportAllData()">📤 Exportar Tudo</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats" style="margin-bottom:14px">
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--greenSoft);color:var(--green)">🗄️</div><span style="font-size:10px;color:var(--text3)">DB SIZE</span></div><b id="data-kpi-db">—</b><span id="data-kpi-db-sub">brain.db</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--blueSoft);color:var(--blue)">📁</div><span style="font-size:10px;color:var(--text3)">WORKSPACE</span></div><b id="data-kpi-ws">—</b><span id="data-kpi-ws-sub">ficheiros</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--purpleSoft);color:var(--purple)">🧠</div><span style="font-size:10px;color:var(--text3)">MEMÓRIAS</span></div><b id="data-kpi-mem">—</b><span>memories + logs</span></div>
+            <div class="stat"><div class="stat-top"><div class="stat-icon" style="background:var(--accentSoft);color:var(--accent)">📊</div><span style="font-size:10px;color:var(--text3)">NEGÓCIOS</span></div><b id="data-kpi-biz">—</b><span id="data-kpi-biz-sub">portfolio</span></div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>📁 Pastas & Leveza</h3>
+              <pre>Leve:
+• 1 HTML 35KB, sem Node
+• 11 libs pip, ~50MB venv
+• SQLite 1 ficheiro brain.db (0.3MB)
+• Arranca 1.5s, 80MB RAM
+• 8 agentes + 21 tools reais
+
+Pastas:
+• data/workspace/ — teus ficheiros + sites via chat
+• data/documents/ — documentos
+• data/logs/ — audit logs
+• data/brain.db — missões, tasks, memórias, negócios
+• data/memory/ — memórias episódicas
+
+Para desinstalar: apaga pasta ai-brain.
+Nada espalhado no sistema.</pre>
+              <div id="def-data-stats" style="margin-top:12px">A carregar stats...</div>
+            </div>
+            <div class="settings-card">
+              <h3>💾 Gestão Dados — Ações Reais</h3>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Exportar, limpar, gerir dados locais — sem cloud. Tudo validado via API real.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+                <button class="btn" style="background:var(--card);border:1px solid var(--border);font-size:11px" onclick="if(confirm('Exportar negócios para JSON?')) apiFetch('/businesses').then(d=>{const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='negocios-'+new Date().toISOString().slice(0,10)+'.json';a.click()})">📤 Exportar negócios</button>
+                <button class="btn" style="background:var(--card);border:1px solid var(--border);font-size:11px" onclick="exportAllData()">📦 Exportar tudo (DB)</button>
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:11px" onclick="apiFetch('/memory?limit=100').then(d=>{const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='memorias-'+new Date().toISOString().slice(0,10)+'.json';a.click()})">🧠 Exportar memórias</button>
+                <button class="btn" style="background:var(--bg2);border:1px solid var(--border);font-size:11px" onclick="if(confirm('Limpar workspace? Apaga todos os ficheiros em data/workspace/')){apiFetch('/system/workspace-list').then(d=>alert('Para limpar: apaga manualmente data/workspace/* e reinicia. '+d.count+' ficheiros actualmente.'))}">🗑️ Limpar workspace</button>
+              </div>
+              <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Última actualização</div>
+                <div id="data-last-update" style="font-size:11px;color:var(--text3)">—</div>
+                <div style="margin-top:8px;display:flex;gap:6px">
+                  <button class="btn" style="flex:1;background:var(--accentDark);color:white;font-size:11px" onclick="loadDataTab();loadNetwork();loadSystem();loadBusinesses();loadDashboard()">↻ Actualizar TUDO (DB+Network+Negócios+Dashboard)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+            <div class="card">
+              <h3>📂 Workspace — Ficheiros Reais <span id="data-ws-count" style="font-weight:400;text-transform:none;font-size:10px;color:var(--text3)">—</span></h3>
+              <div id="data-workspace-list" style="max-height:360px;overflow-y:auto">A carregar ficheiros...</div>
+            </div>
+            <div class="card">
+              <h3>🧠 Memórias Recentes + Logs</h3>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b id="data-mem-count">—</b><br><span style="font-size:9px;color:var(--text2)">MEMÓRIAS</span></div>
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b id="data-log-count">—</b><br><span style="font-size:9px;color:var(--text2)">LOGS</span></div>
+              </div>
+              <div id="data-memories" style="max-height:200px;overflow-y:auto;font-size:11px;margin-bottom:12px">A carregar memórias...</div>
+              <div id="data-logs" style="max-height:140px;overflow-y:auto;font-size:10px">A carregar logs...</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+let conversationId = null;
+const $ = id => document.getElementById(id);
+
+function switchTab(page){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[data-page="${page}"]`).classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $(`page-${page}`).classList.remove('hidden');
+  if(page==='dashboard') loadDashboard();
+  if(page==='chat') {}
+  if(page==='negocios') loadBizMissoes();
+  if(page==='definicoes') loadSystem();
+}
+
+document.querySelectorAll('.tab').forEach(el=>{
+  el.addEventListener('click',()=>switchTab(el.dataset.page));
+});
+
+async function apiFetch(path, opts={}){
+  try{
+    const res = await fetch(API_BASE+path, {headers:{'Content-Type':'application/json'}, ...opts});
+    return await res.json();
+  }catch(e){return {error:e.message};}
+}
+
+// DASHBOARD — com notícias e mercados REAIS
+let newsCache = {portugal:null, world:null, markets:null, crypto:null};
+let marketCache = {crypto:null, stocks:null};
+
+function switchNews(cat){
+  document.querySelectorAll('.news-tab').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background='var(--bg2)';
+    b.style.color='var(--text2)';
+    b.style.border='1px solid var(--border)';
+  });
+  const active = document.querySelector(`.news-tab[data-news="${cat}"]`);
+  if(active){
+    active.classList.add('active');
+    active.style.background='var(--accentDark)';
+    active.style.color='white';
+    active.style.border='1px solid var(--accentDark)';
+  }
+  document.querySelectorAll('.news-panel').forEach(p=>p.classList.add('hidden'));
+  $(`news-${cat}`).classList.remove('hidden');
+  if(!newsCache[cat]) loadNewsCat(cat);
+}
+
+async function loadNewsCat(cat){
+  const el = $(`news-${cat}`);
+  el.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:12px">A carregar notícias reais de '+cat+'...</div>';
+  const data = await apiFetch(`/news/${cat}?count=6`);
+  newsCache[cat] = data;
+  if(data.articles && data.articles.length){
+    el.innerHTML = data.articles.map(a=>`
+      <div style="padding:10px 0;border-bottom:1px solid var(--bg2);display:flex;gap:10px">
+        <div style="flex:1;min-width:0">
+          <a href="${a.link}" target="_blank" style="font-size:13px;font-weight:600;color:var(--text);text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.title}</a>
+          <div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(a.description||'').slice(0,120)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">${a.source||''} • ${a.pubDate ? new Date(a.pubDate).toLocaleTimeString('pt-PT') : ''}</div>
+        </div>
+        <span style="font-size:10px;padding:4px 8px;background:var(--bg2);border-radius:20px;height:fit-content">↗</span>
+      </div>
+    `).join('');
+    $('news-time').textContent = new Date().toLocaleTimeString('pt-PT') + ' • ' + (data.source_name||cat);
+  } else {
+    el.innerHTML = `<div style="padding:12px;color:var(--text3);font-size:12px">Sem notícias — ${data.error||'fonte vazia'} — tenta actualizar</div>`;
+  }
+}
+
+async function loadNews(){
+  // Carrega Portugal por defeito, depois resto em background
+  await loadNewsCat('portugal');
+  // Background
+  ['world','markets','crypto'].forEach(cat=>{
+    apiFetch(`/news/${cat}?count=6`).then(data=>{
+      newsCache[cat]=data;
+      // Se painel estiver visível, actualiza
+      const panel = $(`news-${cat}`);
+      if(panel && !panel.classList.contains('hidden') && data.articles){
+        // já vai ser carregado quando switch
+      }
+    });
+  });
+}
+
+async function loadMarket(){
+  // Crypto
+  $('crypto-gainers').innerHTML = '<div style="font-size:11px;color:var(--text3)">A carregar CoinGecko real...</div>';
+  $('crypto-losers').innerHTML = '';
+  $('stocks-gainers').innerHTML = '<div style="font-size:11px;color:var(--text3)">A carregar Yahoo Finance real...</div>';
+  $('stocks-losers').innerHTML = '';
+
+  const cryptoData = await apiFetch('/crypto/gainers-losers?count=5');
+  marketCache.crypto = cryptoData;
+  if(cryptoData.gainers){
+    $('crypto-gainers').innerHTML = cryptoData.gainers.map(c=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+          <img src="${c.image}" style="width:20px;height:20px;border-radius:50%" onerror="this.style.display='none'">
+          <div style="min-width:0"><b style="font-size:12px">${c.symbol}</b><br><span style="font-size:10px;color:var(--text2)">${c.name.slice(0,18)}</span></div>
+        </div>
+        <div style="text-align:right"><b style="font-size:12px;color:var(--green)">+${(c.price_change_percentage_24h||0).toFixed(2)}%</b><br><span style="font-size:10px;color:var(--text2)">€${(c.current_price||0).toFixed(2)}</span></div>
+      </div>
+    `).join('');
+    $('crypto-losers').innerHTML = cryptoData.losers.map(c=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+          <img src="${c.image}" style="width:20px;height:20px;border-radius:50%" onerror="this.style.display='none'">
+          <div style="min-width:0"><b style="font-size:12px">${c.symbol}</b><br><span style="font-size:10px;color:var(--text2)">${c.name.slice(0,18)}</span></div>
+        </div>
+        <div style="text-align:right"><b style="font-size:12px;color:#d93a00">${(c.price_change_percentage_24h||0).toFixed(2)}%</b><br><span style="font-size:10px;color:var(--text2)">€${(c.current_price||0).toFixed(2)}</span></div>
+      </div>
+    `).join('');
+    $('crypto-time').textContent = new Date().toLocaleTimeString('pt-PT') + ' • ' + cryptoData.total_analyzed + ' analisadas';
+  }
+
+  const stocksData = await apiFetch('/stocks/gainers-losers?count=5');
+  marketCache.stocks = stocksData;
+  if(stocksData.gainers){
+    $('stocks-gainers').innerHTML = stocksData.gainers.map(s=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">
+        <div style="min-width:0;flex:1"><b style="font-size:12px">${s.symbol}</b><br><span style="font-size:10px;color:var(--text2)">${(s.exchange||'').slice(0,12)}</span></div>
+        <div style="text-align:right"><b style="font-size:12px;color:var(--green)">+${(s.changePercent||0).toFixed(2)}%</b><br><span style="font-size:10px;color:var(--text2)">$${(s.regularMarketPrice||0).toFixed(2)}</span></div>
+      </div>
+    `).join('');
+    $('stocks-losers').innerHTML = stocksData.losers.map(s=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg2)">
+        <div style="min-width:0;flex:1"><b style="font-size:12px">${s.symbol}</b><br><span style="font-size:10px;color:var(--text2)">${(s.exchange||'').slice(0,12)}</span></div>
+        <div style="text-align:right"><b style="font-size:12px;color:#d93a00">${(s.changePercent||0).toFixed(2)}%</b><br><span style="font-size:10px;color:var(--text2)">$${(s.regularMarketPrice||0).toFixed(2)}</span></div>
+      </div>
+    `).join('');
+    $('stocks-time').textContent = new Date().toLocaleTimeString('pt-PT') + ' • ' + stocksData.total_analyzed + ' analisadas';
+  }
+}
+
+async function loadDashboard(){
+  const tasksData = await apiFetch('/tasks?limit=6');
+  const memData = await apiFetch('/memory?limit=1');
+  const agentsData = await apiFetch('/agents');
+
+  $('stat-missoes').textContent = tasksData.count || 0;
+  $('stat-mem').textContent = memData.count || 0;
+
+  const tasksEl = $('dashboard-tasks');
+  if(tasksData.missions && tasksData.missions.length){
+    tasksEl.innerHTML = tasksData.missions.slice(0,5).map(m=>`
+      <div class="task-item">
+        <div class="task-item-left"><strong>${m.objective.slice(0,60)}</strong><div class="meta">${m.id.slice(0,8)} • ${new Date(m.created_at).toLocaleTimeString('pt-PT')} • ${m.status}</div></div>
+        <span class="status ${m.status}">${m.status}</span>
+      </div>
+    `).join('');
+  } else {
+    tasksEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Nenhuma missão ainda — cria a primeira no CHAT ou NEGÓCIOS ✨</div>';
+  }
+
+  const agentsEl = $('dashboard-agents');
+  if(agentsData.agents){
+    agentsEl.innerHTML = agentsData.agents.slice(0,5).map(a=>`
+      <div class="agent-row">
+        <div class="ico" style="background:var(--bg2)">${{research:'🔍',coding_qa:'💻',design:'🎨',business:'📊',browser:'🌐',automation:'⚡',monitor:'◍',builder:'✦'}[a.id]||'✦'}</div>
+        <div><b>${a.name}</b><br><span>${a.specialty}</span></div>
+        <div class="right"><span class="green-dot"></span><span style="font-size:10px;font-weight:700;color:var(--green)">READY</span></div>
+      </div>
+    `).join('');
+  }
+
+  const h = new Date().getHours();
+  const greet = h<12 ? 'Bom dia' : h<18 ? 'Boa tarde' : 'Boa noite';
+  $('hero-title').textContent = `${greet} — vamos criar algo bonito?`;
+
+  // Carrega notícias e mercados reais em background — não bloqueia dashboard
+  loadNews();
+  loadMarket();
+}
+
+async function quickMission(obj){
+  const res = await apiFetch('/tasks', {method:'POST', body:JSON.stringify({objective:obj})});
+  if(res.mission_id){
+    await apiFetch(`/tasks/${res.mission_id}/run`, {method:'POST'});
+    loadDashboard();
+    alert('Missão criada e executada: '+res.mission_id);
+  }
+}
+
+// CHAT
+$('send-btn').addEventListener('click', sendChat);
+$('chat-input').addEventListener('keypress', e=>{if(e.key==='Enter') sendChat();});
+function quick(text){ $('chat-input').value=text; sendChat(); }
+
+async function sendChat(){
+  const input = $('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value='';
+  const area = $('chat-area');
+  area.innerHTML += `<div class="msg-row user"><div class="msg-avatar you">TU</div><div><div class="msg-bubble">${msg}</div><div class="msg-meta">Tu • agora</div></div></div>`;
+  area.scrollTop = area.scrollHeight;
+
+  // Mostra "a construir..." se for pedido de app/site
+  const isBuild = /criar app|cria app|criar site|cria site|landing page|website|portfolio|loja online/i.test(msg);
+  let buildingEl = null;
+  if(isBuild){
+    buildingEl = document.createElement('div');
+    buildingEl.className = 'msg-row bot';
+    buildingEl.innerHTML = `<div class="msg-avatar bot">B</div><div><div class="msg-bubble">🏗️ A construir <b>${msg.slice(0,60)}</b>...<br><br>→ A criar missão real<br>→ Builder Agent a gerar HTML leve e bonito<br>→ A guardar em data/workspace<br><br><span style="font-size:11px;color:var(--text2)">Isto demora 2-5s — execução real, não simulação</span></div></div>`;
+    area.appendChild(buildingEl);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  const data = await apiFetch('/chat', {method:'POST', body:JSON.stringify({message:msg, conversation_id:conversationId})});
+  if(data.conversation_id) conversationId = data.conversation_id;
+
+  if(buildingEl) buildingEl.remove();
+
+  const reply = (data.message || data.error || 'Sem resposta').replace(/\n/g,'<br>');
+  let extraHtml = '';
+
+  // Se construiu app/site, mostra preview bonito
+  if(data.built_url || (data.artifacts && data.artifacts.length)){
+    const url = data.built_url || (data.artifacts[0] && data.artifacts[0].url) || '';
+    const filename = data.artifacts && data.artifacts[0] ? data.artifacts[0].filename : url.split('/').pop();
+    if(url){
+      extraHtml = `
+        <div style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+          <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--card);border-bottom:1px solid var(--border)">
+            <strong style="font-size:12px">✅ Site construído: ${filename}</strong>
+            <a href="${url}" target="_blank" style="font-size:11px;color:var(--accent);font-weight:700;text-decoration:none">Abrir em nova aba ↗</a>
+          </div>
+          <div style="background:white">
+            <iframe src="${url}" style="width:100%;height:320px;border:none" loading="lazy"></iframe>
+          </div>
+          <div style="padding:10px 14px;display:flex;gap:8px">
+            <button class="btn" style="background:var(--accentDark);color:white;padding:8px 12px;font-size:11px" onclick="window.open('${url}','_blank')">👁️ Ver site</button>
+            <button class="btn" style="background:var(--bg2);border:1px solid var(--border);padding:8px 12px;font-size:11px" onclick="navigator.clipboard.writeText(window.location.origin+'${url}');alert('Link copiado: '+window.location.origin+'${url}')">📋 Copiar link</button>
+            <span style="margin-left:auto;font-size:10px;color:var(--text3);align-self:center">${data.mission_id ? 'Missão '+data.mission_id.slice(0,8) : ''} • leve & bonito</span>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  area.innerHTML += `<div class="msg-row bot"><div class="msg-avatar bot">B</div><div><div class="msg-bubble">${reply}${extraHtml}</div><div class="msg-meta">Brain • ${data.model||'local'} • ${data.ollama_available?'Ollama':'modo leve'}${data.mission_id ? ' • Missão '+data.mission_id.slice(0,8) : ''}</div></div></div>`;
+  area.scrollTop = area.scrollHeight;
+  loadDashboard();
+  if(data.built_url) loadBizMissoes();
+}
+
+// NEGOCIOS — OS NOSSOS NEGÓCIOS — Portfolio real + gestão completa
+let businessesCache = [];
+let selectedBusinessId = null;
+let editingBusinessId = null;
+
+async function loadBusinesses(){
+  const data = await apiFetch('/businesses');
+  businessesCache = data.businesses || [];
+  const grid = $('businesses-grid');
+  const kpis = data.kpis || {};
+
+  // KPIs globais
+  $('biz-kpi-total').textContent = kpis.total_businesses || 0;
+  $('biz-kpi-revenue').textContent = '€' + (kpis.total_revenue||0).toLocaleString('pt-PT');
+  $('biz-kpi-costs').textContent = '€' + (kpis.total_costs||0).toLocaleString('pt-PT');
+  $('biz-kpi-profit').textContent = '€' + (kpis.total_profit||0).toLocaleString('pt-PT') + ' • ' + (kpis.avg_margin||0).toFixed(1)+'%';
+  $('stat-missoes').textContent = kpis.total_businesses || 0; // also update dashboard stat
+
+  // Popula selects
+  const selects = ['biz-select'];
+  selects.forEach(id=>{
+    const sel = $(id);
+    if(!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— sem ligação —</option>' + businessesCache.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+    sel.value = cur;
+  });
+
+  if(!businessesCache.length){
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:20px;padding:40px;text-align:center">
+        <div style="font-size:32px;margin-bottom:12px">🏢</div>
+        <b style="font-size:15px">Ainda não tens negócios registados</b>
+        <p style="font-size:13px;color:var(--text2);margin:8px 0 16px">Cria o teu primeiro negócio — portfolio real com receita, custos, margem, missões e sites</p>
+        <button class="btn" style="background:var(--accentDark);color:white" onclick="openBusinessModal()">+ Criar primeiro negócio</button>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = businessesCache.map(b=>{
+    const statusColor = {ideia:'#a99e96', validacao:'#b45309', ativo:'#0e9f6e', pausado:'#7a7068', vendido:'#2563eb', arquivado:'#a99e96'}[b.status] || '#7a7068';
+    const statusLabel = {ideia:'💡 Ideia', validacao:'🔍 Validação', ativo:'✅ Ativo', pausado:'⏸️ Pausado', vendido:'💰 Vendido', arquivado:'📦 Arquivado'}[b.status] || b.status;
+    const margin = b.margin_percent||0;
+    const profit = b.profit_monthly||0;
+    return `
+      <div class="card" style="cursor:pointer;transition:all .2s" onclick="selectBusiness('${b.id}')" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadowLg)'" onmouseleave="this.style.transform='';this.style.boxShadow='var(--shadow)'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div style="flex:1;min-width:0">
+            <b style="font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.name}</b>
+            <span style="font-size:11px;color:var(--text2)">${b.sector||'Sem setor'} • ${b.customer_segment||'—'}</span>
+          </div>
+          <span class="status" style="background:${statusColor}15;color:${statusColor};border-color:${statusColor}30;font-size:9px">${statusLabel}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${b.description||'Sem descrição'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b style="font-size:13px;color:var(--green)">€${(b.revenue_monthly||0).toLocaleString('pt-PT')}</b><br><span style="font-size:9px;color:var(--text2);text-transform:uppercase">Receita</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b style="font-size:13px;color:#d93a00">€${(b.costs_monthly||0).toLocaleString('pt-PT')}</b><br><span style="font-size:9px;color:var(--text2);text-transform:uppercase">Custos</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b style="font-size:13px;color:${profit>=0?'var(--green)':'#d93a00'}">${margin.toFixed(1)}%</b><br><span style="font-size:9px;color:var(--text2);text-transform:uppercase">Margem</span></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" style="flex:1;background:var(--accentDark);color:white;font-size:11px;padding:6px" onclick="event.stopPropagation();selectBusiness('${b.id}')">📊 Ver</button>
+          <button class="btn" style="flex:1;background:var(--bg2);border:1px solid var(--border);font-size:11px;padding:6px" onclick="event.stopPropagation();quickEditBusiness('${b.id}')">✏️ Editar</button>
+        </div>
+        ${b.website_url ? `<div style="margin-top:8px;font-size:10px"><a href="${b.website_url}" target="_blank" style="color:var(--accent);text-decoration:none">↗ ${b.website_url.slice(0,30)}</a></div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function selectBusiness(id){
+  selectedBusinessId = id;
+  const data = await apiFetch(`/businesses/${id}/dashboard`);
+  if(data.error){ alert(data.error); return; }
+  const b = data.business;
+  const kpis = data.kpis;
+
+  $('business-detail').classList.remove('hidden');
+  $('detail-name').textContent = b.name;
+  $('detail-status').textContent = b.status;
+  $('detail-status').className = 'status ' + (b.status==='ativo'?'COMPLETED':b.status==='ideia'?'PENDING':'READY');
+  $('detail-revenue').textContent = '€' + (b.revenue_monthly||0).toLocaleString('pt-PT');
+  $('detail-costs').textContent = '€' + (b.costs_monthly||0).toLocaleString('pt-PT');
+  $('detail-profit').textContent = '€' + (b.profit_monthly||0).toLocaleString('pt-PT');
+  $('detail-margin').textContent = (b.margin_percent||0).toFixed(1)+'%';
+  $('detail-missions').textContent = kpis.missions_count||0;
+  $('detail-tasks').textContent = kpis.tasks_count||0;
+  $('detail-desc').textContent = b.description || 'Sem descrição';
+  $('detail-sector').textContent = b.sector || 'Sem setor';
+  $('detail-website').innerHTML = b.website_url ? `<a href="${b.website_url}" target="_blank" style="color:var(--accent);text-decoration:none">↗ ${b.website_url}</a>` : '';
+
+  const missionsEl = $('detail-missions-list');
+  if(data.missions && data.missions.length){
+    missionsEl.innerHTML = data.missions.map(m=>`
+      <div style="padding:8px 0;border-bottom:1px solid var(--bg2);display:flex;justify-content:space-between;gap:8px">
+        <div style="flex:1;min-width:0"><b style="font-size:11px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.objective}</b><span style="font-size:9px;color:var(--text3)">${m.status} • ${new Date(m.created_at).toLocaleTimeString('pt-PT')}</span></div>
+        <span class="status ${m.status}" style="font-size:8px">${m.status}</span>
+      </div>
+    `).join('');
+  } else {
+    missionsEl.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:10px;text-align:center">Sem missões ligadas — cria a primeira</div>';
+  }
+
+  // Scroll to detail
+  $('business-detail').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // Preenche selects de ferramentas com este negócio
+  if($('biz-select')) $('biz-select').value = id;
+  // selects concorrencia e calc removidos
+  if($('biz-ideia')) $('biz-ideia').value = b.name;
+  if($('biz-valor')) $('biz-valor').value = b.value_proposition||'';
+  if($('biz-segmento')) $('biz-segmento').value = b.customer_segment||'';
+  if($('biz-canal')) $('biz-canal').value = b.channel||'';
+}
+
+function openBusinessModal(editId=null){
+  editingBusinessId = editId;
+  $('business-modal').classList.remove('hidden');
+  if(editId){
+    $('modal-title').textContent = '✏️ Editar Negócio';
+    const b = businessesCache.find(x=>x.id===editId);
+    if(b){
+      $('m-name').value = b.name||'';
+      $('m-sector').value = b.sector||'';
+      $('m-status').value = b.status||'ativo';
+      $('m-desc').value = b.description||'';
+      $('m-revenue').value = b.revenue_monthly||0;
+      $('m-costs').value = b.costs_monthly||0;
+      $('m-value').value = b.value_proposition||'';
+      $('m-segment').value = b.customer_segment||'';
+      $('m-channel').value = b.channel||'';
+      $('m-website').value = b.website_url||'';
+      $('m-tags').value = b.tags||'';
+      $('m-notes').value = b.notes||'';
+    }
+  } else {
+    $('modal-title').textContent = '+ Novo Negócio';
+    ['m-name','m-sector','m-desc','m-value','m-segment','m-channel','m-website','m-tags','m-notes'].forEach(id=>{ if($(id)) $(id).value=''; });
+    $('m-revenue').value = 0;
+    $('m-costs').value = 0;
+    $('m-status').value = 'ativo';
+  }
+}
+
+function closeBusinessModal(){
+  $('business-modal').classList.add('hidden');
+  editingBusinessId = null;
+  $('m-result').textContent = '';
+}
+
+function quickEditBusiness(id){
+  openBusinessModal(id);
+}
+
+function editCurrentBusiness(){
+  if(selectedBusinessId) openBusinessModal(selectedBusinessId);
+}
+
+async function saveBusiness(){
+  const payload = {
+    name: $('m-name').value.trim(),
+    sector: $('m-sector').value.trim(),
+    description: $('m-desc').value.trim(),
+    status: $('m-status').value,
+    revenue_monthly: parseFloat($('m-revenue').value)||0,
+    costs_monthly: parseFloat($('m-costs').value)||0,
+    value_proposition: $('m-value').value.trim(),
+    customer_segment: $('m-segment').value.trim(),
+    channel: $('m-channel').value.trim(),
+    website_url: $('m-website').value.trim(),
+    tags: $('m-tags').value.trim(),
+    notes: $('m-notes').value.trim()
+  };
+  if(!payload.name){ $('m-result').textContent = 'Nome obrigatório'; return; }
+
+  $('m-result').textContent = 'A guardar...';
+  let res;
+  if(editingBusinessId){
+    res = await apiFetch(`/businesses/${editingBusinessId}`, {method:'PUT', body:JSON.stringify(payload)});
+  } else {
+    res = await apiFetch('/businesses', {method:'POST', body:JSON.stringify(payload)});
+  }
+
+  if(res.business){
+    $('m-result').textContent = '✅ Guardado: ' + res.business.name;
+    closeBusinessModal();
+    await loadBusinesses();
+    if(res.business.id) selectBusiness(res.business.id);
+  } else {
+    $('m-result').textContent = 'Erro: ' + JSON.stringify(res);
+  }
+}
+
+async function deleteCurrentBusiness(){
+  if(!selectedBusinessId) return;
+  if(!confirm('Apagar este negócio?')) return;
+  await apiFetch(`/businesses/${selectedBusinessId}`, {method:'DELETE'});
+  $('business-detail').classList.add('hidden');
+  selectedBusinessId = null;
+  loadBusinesses();
+}
+
+async function criarMissaoParaNegocio(){
+  if(!selectedBusinessId){ alert('Seleciona um negócio primeiro'); return; }
+  const b = businessesCache.find(x=>x.id===selectedBusinessId);
+  const obj = prompt('Objectivo da missão para ' + b.name + ':', 'Analisar crescimento de ' + b.name);
+  if(!obj) return;
+  const res = await apiFetch('/tasks', {method:'POST', body:JSON.stringify({objective: obj, context:{business_id: selectedBusinessId, business_name: b.name}})});
+  if(res.mission_id){
+    // Tenta associar business_id via API direta
+    await apiFetch(`/businesses/${selectedBusinessId}`, {method:'PUT', body:JSON.stringify({})}); // touch
+    // Atualiza missão com business_id via raw? Para MVP, guardamos em context e também fazemos update manual via python
+    await apiFetch(`/tasks/${res.mission_id}/run`, {method:'POST'});
+    alert('Missão criada: ' + res.mission_id);
+    selectBusiness(selectedBusinessId);
+    loadBizMissoes();
+  }
+}
+
+async function criarSiteParaNegocio(){
+  if(!selectedBusinessId){ alert('Seleciona um negócio'); return; }
+  const b = businessesCache.find(x=>x.id===selectedBusinessId);
+  const promptText = `Cria um site minimalista e bonito para o negócio ${b.name} — ${b.description||''} — setor ${b.sector||''} — proposta ${b.value_proposition||''}`;
+  $('chat-input').value = promptText;
+  switchTab('chat');
+  setTimeout(()=>sendChat(), 300);
+}
+
+// Calculadora + Modelo + Concorrência — agora ligados a negócio
+function calcMargem(){
+  const custo = parseFloat($('custo').value) || 0;
+  const preco = parseFloat($('preco').value) || 0;
+  if(preco===0){ $('margem-result').textContent='Preço não pode ser 0'; return; }
+  const lucro = preco - custo;
+  const margem = (lucro / preco * 100);
+  const markup = custo===0 ? 0 : (lucro / custo * 100);
+
+  $('kpi-margem').textContent = margem.toFixed(1)+'%';
+  $('kpi-lucro').textContent = '€'+lucro.toFixed(2);
+  $('kpi-markup').textContent = markup.toFixed(1)+'%';
+
+  const bizId = $('calc-business-select')?.value;
+  const bizName = bizId ? (businessesCache.find(b=>b.id===bizId)?.name || '') : '';
+
+  const texto = `Cálculo REAL — fórmula transparente:
+Custo: €${custo.toFixed(2)}
+Preço: €${preco.toFixed(2)}
+Lucro: €${lucro.toFixed(2)}
+Margem: ${margem.toFixed(2)}% = (preço-custo)/preço*100
+Markup: ${markup.toFixed(2)}% = lucro/custo*100
+${bizName ? `Negócio: ${bizName}` : ''}
+
+[VERIFICADO] Cálculo com dados reais que inseriste
+[ESTIMATIVA] Não inclui taxas, envio, impostos — adicionar
+[NÃO VERIFICADO] Tráfego, conversão, CAC — requer dados reais
+
+Evidência guardada em memória.`;
+
+  $('margem-result').textContent = texto;
+
+  apiFetch('/memory', {method:'POST', body:JSON.stringify({content:`Margem calculada: custo ${custo} preço ${preco} margem ${margem.toFixed(2)}% ${bizName ? 'negócio '+bizName : ''}`, type:'long', source:'negocios-calculadora'})});
+
+  // Se ligado a negócio, actualiza custos/receita?
+  if(bizId && confirm(`Actualizar ${bizName} com receita €${preco} e custos €${custo}?`)){
+    apiFetch(`/businesses/${bizId}`, {method:'PUT', body:JSON.stringify({revenue_monthly: preco, costs_monthly: custo})}).then(()=>loadBusinesses());
+  }
+}
+
+async function criarNegocio(){
+  const ideia = $('biz-ideia').value.trim();
+  const valor = $('biz-valor').value.trim();
+  const segmento = $('biz-segmento').value.trim();
+  const canal = $('biz-canal').value.trim();
+  const bizId = $('biz-select')?.value;
+  if(!ideia){ alert('Escreve a ideia/produto'); return; }
+
+  $('biz-result').textContent = 'A criar missão real com Business Agent...';
+
+  const context = {
+    value_proposition: valor,
+    customer_segments: [segmento],
+    channels: [canal],
+    costs: {cost: parseFloat($('custo').value)||0, price: parseFloat($('preco').value)||0},
+    business_id: bizId || null
+  };
+
+  const res = await apiFetch('/tasks', {method:'POST', body:JSON.stringify({
+    objective:`Analisar negócio: ${ideia}`,
+    context: context
+  })});
+
+  if(res.mission_id){
+    $('biz-result').textContent = `Missão criada ${res.mission_id} — a executar Business Agent...`;
+    const run = await apiFetch(`/tasks/${res.mission_id}/run`, {method:'POST'});
+    const final = await apiFetch(`/tasks/${res.mission_id}`);
+    const task = final.tasks && final.tasks[0];
+    if(task){
+      $('biz-result').textContent = task.result_summary || JSON.stringify(run).slice(0,2000);
+    } else {
+      $('biz-result').textContent = JSON.stringify(run, null, 2).slice(0,2000);
+    }
+    loadBizMissoes();
+    loadDashboard();
+    if(bizId) selectBusiness(bizId);
+  } else {
+    $('biz-result').textContent = 'Erro: '+JSON.stringify(res);
+  }
+}
+
+async function analisarConcorrencia(){
+  const urls = $('comp-urls').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const obj = $('comp-obj').value.trim() || 'Analisar concorrência';
+  const bizId = $('comp-biz-select')?.value;
+  if(urls.length===0){ alert('Cola pelo menos 1 URL'); return; }
+
+  $('comp-result').textContent = `A analisar ${urls.length} URLs com web.fetch REAL...`;
+
+  const res = await apiFetch('/tasks', {method:'POST', body:JSON.stringify({
+    objective: obj,
+    context:{competitor_urls:urls, business_id: bizId || null}
+  })});
+
+  if(res.mission_id){
+    const run = await apiFetch(`/tasks/${res.mission_id}/run`, {method:'POST'});
+    const final = await apiFetch(`/tasks/${res.mission_id}`);
+    $('comp-result').textContent = (final.tasks && final.tasks[0] && final.tasks[0].result_summary) || JSON.stringify(run).slice(0,2000);
+    loadBizMissoes();
+    if(bizId) selectBusiness(bizId);
+  }
+}
+
+async function loadBizMissoes(){
+  const data = await apiFetch('/tasks?limit=10');
+  const el = $('biz-missoes');
+  if(data.missions){
+    const biz = data.missions.filter(m=>m.objective.toLowerCase().includes('negócio') || m.objective.toLowerCase().includes('negocio') || m.objective.toLowerCase().includes('concorrência') || m.objective.toLowerCase().includes('mercado')).slice(0,5);
+    const list = biz.length ? biz : data.missions.slice(0,5);
+    el.innerHTML = list.map(m=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2)">
+        <div style="flex:1;min-width:0"><strong style="font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.objective}</strong><span style="font-size:10px;color:var(--text3)">${m.status} • ${new Date(m.created_at).toLocaleTimeString('pt-PT')}</span></div>
+        <span class="status ${m.status}" style="font-size:9px">${m.status}</span>
+      </div>
+    `).join('') || '<div style="color:var(--text3);font-size:12px">Sem missões de negócio ainda</div>';
+  }
+  // Também carrega negócios
+  loadBusinesses();
+}
+
+// DEFINICOES — por tabs com Network + KPIs
+function switchDefTab(cat){
+  document.querySelectorAll('.def-tab').forEach(b=>{
+    b.classList.remove('active');
+    b.style.background='var(--bg2)';
+    b.style.color='var(--text2)';
+    b.style.border='1px solid var(--border)';
+  });
+  const active = document.querySelector(`.def-tab[data-def="${cat}"]`);
+  if(active){
+    active.classList.add('active');
+    active.style.background='var(--accentDark)';
+    active.style.color='white';
+    active.style.border='1px solid var(--accentDark)';
+  }
+  document.querySelectorAll('.def-panel').forEach(p=>p.classList.add('hidden'));
+  const panel = $(`def-${cat}`);
+  if(panel) panel.classList.remove('hidden');
+  if(cat==='network') loadNetwork();
+  if(cat==='ai') loadSystem();
+  if(cat==='security') loadAuditLogs();
+  if(cat==='data') { loadNetwork(); loadDataTab(); }
+  if(cat==='geral') loadSystem();
+}
+
+
+function renderNetworkGraph(data){
+  const container = $('net-visual-graph');
+  if(!container || !data.agents?.detailed) return;
+  const agents = data.agents.detailed;
+  const toolsByCat = data.tools?.by_category || {};
+  const allTools = [];
+  Object.entries(toolsByCat).forEach(([cat, list])=>{
+    list.forEach(t=> allTools.push({...t, cat}));
+  });
+
+  const W = container.clientWidth || 800;
+  const H = 520;
+  const cx = W/2;
+  const cy = H/2;
+  const agentRadius = Math.min(W,H)*0.28;
+  const toolRadius = Math.min(W,H)*0.45;
+
+  // SVG
+  let svg = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" style="background:radial-gradient(ellipse at center, var(--card) 0%, var(--bg) 100%)" xmlns="http://www.w3.org/2000/svg">`;
+  // defs for glow
+  svg += `<defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+
+  // Connections orchestrator -> agents
+  agents.forEach((a,i)=>{
+    const ang = (i / agents.length) * Math.PI*2 - Math.PI/2;
+    const x = cx + Math.cos(ang)*agentRadius;
+    const y = cy + Math.sin(ang)*agentRadius;
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--border)" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.6"/>`;
+  });
+
+  // Connections agents -> tools (if agent tools match)
+  agents.forEach((a, ai)=>{
+    const angA = (ai / agents.length) * Math.PI*2 - Math.PI/2;
+    const ax = cx + Math.cos(angA)*agentRadius;
+    const ay = cy + Math.sin(angA)*agentRadius;
+    const aTools = a.tools || [];
+    allTools.forEach((t, ti)=>{
+      if(aTools.includes(t.id) || aTools.some(at=> t.id.includes(at.split('.')[0]))){
+        const angT = (ti / Math.max(1, allTools.length)) * Math.PI*2 - Math.PI/2;
+        const tx = cx + Math.cos(angT)*toolRadius;
+        const ty = cy + Math.sin(angT)*toolRadius;
+        svg += `<line x1="${ax}" y1="${ay}" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width="0.6" opacity="0.15"/>`;
+      }
+    });
+  });
+
+  // Tools nodes outer circle
+  allTools.forEach((t, i)=>{
+    const ang = (i / Math.max(1, allTools.length)) * Math.PI*2 - Math.PI/2;
+    const x = cx + Math.cos(ang)*toolRadius;
+    const y = cy + Math.sin(ang)*toolRadius;
+    const catColors = {filesystem:'#0a7d4a', web:'#0a5dc2', python:'#a85a00', scheduler:'#6b4eff', browser:'#0a5dc2', site:'#111', news:'#d93a00', crypto:'#f59e0b', stocks:'#0a7d4a', dashboard:'#111'};
+    const col = catColors[t.cat] || '#888';
+    svg += `<g transform="translate(${x},${y})"><circle r="14" fill="var(--bg)" stroke="${col}" stroke-width="1.2" opacity="0.9"/><text text-anchor="middle" dy="0.35em" font-size="8" fill="${col}" font-weight="700">${t.id.split('.')[0].slice(0,2).toUpperCase()}</text><title>${t.id} (${t.cat}) risk:${t.risk}</title></g>`;
+  });
+
+  // Agents nodes inner circle
+  const iconMap = {research:'🔍', coding_qa:'💻', design:'🎨', business:'📊', browser:'🌐', automation:'⚡', monitor:'◍', builder:'✦'};
+  agents.forEach((a,i)=>{
+    const ang = (i / agents.length) * Math.PI*2 - Math.PI/2;
+    const x = cx + Math.cos(ang)*agentRadius;
+    const y = cy + Math.sin(ang)*agentRadius;
+    const icon = iconMap[a.id] || '🤖';
+    svg += `<g transform="translate(${x},${y})"><circle r="26" fill="var(--card)" stroke="var(--accentDark)" stroke-width="2" filter="url(#glow)"/><text text-anchor="middle" dy="-2" font-size="16">${icon}</text><text text-anchor="middle" dy="12" font-size="7" font-weight="800" fill="var(--text)">${a.id.slice(0,8)}</text><title>${a.name} — ${a.specialty} — tools: ${(a.tools||[]).join(', ')}</title></g>`;
+  });
+
+  // Orchestrator center
+  svg += `<g transform="translate(${cx},${cy})"><circle r="44" fill="var(--accentDark)" stroke="white" stroke-width="3"/><text text-anchor="middle" dy="-4" font-size="20">🧠</text><text text-anchor="middle" dy="14" font-size="8" font-weight="800" fill="white">ORQUESTRADOR</text><circle r="54" fill="none" stroke="var(--accentDark)" stroke-width="1" stroke-dasharray="6 3" opacity="0.4"><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="20s" repeatCount="indefinite"/></circle></g>`;
+
+  // Labels
+  svg += `<text x="12" y="20" font-size="10" fill="var(--text2)" font-weight="700">GOD CEREBRO CORE — REDE REAL</text>`;
+  svg += `<text x="12" y="${H-10}" font-size="9" fill="var(--text3)">${agents.length} agentes • ${allTools.length} tools • conexões validadas via registry</text>`;
+
+  svg += `</svg>`;
+  container.innerHTML = svg;
+}
+
+
+async function loadDataTab(){
+  try{
+    const net = await apiFetch('/system/network');
+    if($('data-kpi-db')) $('data-kpi-db').textContent = (net.db?.size_mb||0)+'MB';
+    if($('data-kpi-db-sub')) $('data-kpi-db-sub').textContent = (net.kpis?.total_missions||0)+' missões • '+(net.kpis?.total_tasks||0)+' tasks';
+    if($('data-kpi-ws')) $('data-kpi-ws').textContent = (net.workspace?.files_count||0)+' files';
+    if($('data-kpi-ws-sub')) $('data-kpi-ws-sub').textContent = (net.db?.size_mb||0)+'MB DB';
+    if($('data-kpi-mem')) $('data-kpi-mem').textContent = (net.kpis?.total_memories||0);
+    if($('data-kpi-biz')) $('data-kpi-biz').textContent = (net.kpis?.total_businesses||0);
+    if($('data-kpi-biz-sub')) $('data-kpi-biz-sub').textContent = (net.kpis?.total_businesses||0)+' negócios';
+    if($('def-data-stats')){
+      $('def-data-stats').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.db?.size_mb||0}MB</b><br><span style="font-size:8px;color:var(--text2)">DB SIZE</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.workspace?.files_count||0}</b><br><span style="font-size:8px;color:var(--text2)">WORKSPACE</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.kpis?.total_memories||0}</b><br><span style="font-size:8px;color:var(--text2)">MEMÓRIAS</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.kpis?.total_missions||0}</b><br><span style="font-size:8px;color:var(--text2)">MISSÕES</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.kpis?.total_tasks||0}</b><br><span style="font-size:8px;color:var(--text2)">TASKS</span></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center"><b>${net.kpis?.external_ok||0}/${net.kpis?.external_total||0}</b><br><span style="font-size:8px;color:var(--text2)">EXT OK</span></div>
+        </div>`;
+    }
+    if($('data-last-update')) $('data-last-update').textContent = 'Actualizado: ' + new Date(net.timestamp).toLocaleString('pt-PT') + ' • Check ' + (net.internal?.total_check_ms||0) + 'ms';
+  }catch(e){ console.error('dataTab net error', e); }
+
+  // Workspace list
+  try{
+    const ws = await apiFetch('/system/workspace-list');
+    if($('data-ws-count')) $('data-ws-count').textContent = (ws.count||0)+' ficheiros';
+    if($('data-workspace-list')){
+      if(ws.files && ws.files.length){
+        $('data-workspace-list').innerHTML = ws.files.map(f=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg2)">
+            <div style="flex:1;min-width:0">
+              <b style="font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${f.name}</b>
+              <span style="font-size:9px;color:var(--text3)">${f.size_kb}KB • ${new Date(f.modified).toLocaleString('pt-PT')}</span>
+            </div>
+            <div style="display:flex;gap:4px">
+              ${f.url?`<a href="${f.url}" target="_blank" style="font-size:10px;background:var(--card);border:1px solid var(--border);padding:4px 8px;border-radius:6px;text-decoration:none;color:var(--text)">👁️ Ver</a>`:''}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        $('data-workspace-list').innerHTML = '<div style="color:var(--text3);font-size:11px">Sem ficheiros ainda — cria sites via CHAT</div>';
+      }
+    }
+  }catch(e){ if($('data-workspace-list')) $('data-workspace-list').innerHTML = '<div style="color:#d93a00;font-size:11px">Erro workspace: '+e.message+'</div>'; }
+
+  // Memories
+  try{
+    const mem = await apiFetch('/memory?limit=10');
+    if($('data-mem-count')) $('data-mem-count').textContent = mem.count|| (mem.memories?.length||0);
+    if($('data-memories')){
+      if(mem.memories && mem.memories.length){
+        $('data-memories').innerHTML = mem.memories.slice(0,6).map(m=>`
+          <div style="padding:6px 0;border-bottom:1px solid var(--bg2)">
+            <b style="font-size:10px">${m.type||'mem'} • ${new Date(m.created_at).toLocaleTimeString('pt-PT')}</b><br>
+            <span style="font-size:10px;color:var(--text2)">${(m.content||'').slice(0,120)}</span>
+          </div>
+        `).join('');
+      } else {
+        $('data-memories').innerHTML = '<div style="color:var(--text3)">Sem memórias ainda</div>';
+      }
+    }
+  }catch(e){}
+
+  // Logs
+  try{
+    const logs = await apiFetch('/logs?limit=10');
+    if($('data-log-count')) $('data-log-count').textContent = logs.total||0;
+    if($('data-logs')){
+      if(logs.logs && logs.logs.length){
+        $('data-logs').innerHTML = logs.logs.slice(-6).reverse().map(l=>`
+          <div style="padding:4px 0;border-bottom:1px solid var(--bg2)"><b style="font-size:9px">${l.event_type||'LOG'}</b> <span style="font-size:8px;color:var(--text3)">${new Date(l.timestamp||Date.now()).toLocaleTimeString('pt-PT')}</span><br><span style="font-size:9px;color:var(--text2)">${JSON.stringify(l.details||{}).slice(0,80)}</span></div>
+        `).join('');
+      } else {
+        $('data-logs').innerHTML = '<div style="color:var(--text3);font-size:10px">Sem logs — audit vazio</div>';
+      }
+    }
+  }catch(e){}
+}
+
+function exportAllData(){
+  apiFetch('/system/export-all').then(d=>{
+    const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='ai-brain-export-'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }).catch(e=>alert('Erro export: '+e.message));
+}
+
+async function loadNetwork(){
+  const extEl = $('net-external');
+  const intEl = $('net-internal');
+  const dbCountsEl = $('net-db-counts');
+  const mapEl = $('net-map');
+  const flowEl = $('net-orchestrator-flow');
+  const compEl = $('net-orchestrator-components');
+  const agentsGrid = $('net-agents-grid');
+  const toolsGrid = $('net-tools-grid');
+  if(extEl) extEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:12px">A testar network real — CoinGecko, Yahoo, Google News, agentes, orquestrador...</div>';
+  if(flowEl) flowEl.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:12px">A carregar fluxo orquestrador...</div>';
+  
+  const data = await apiFetch('/system/network');
+  if(data.error){
+    if(extEl) extEl.innerHTML = `<div style="color:#d93a00;font-size:12px">Erro network: ${data.error}</div>`;
+    return;
+  }
+  if($('net-kpi-latency')) $('net-kpi-latency').textContent = (data.kpis?.uptime_check_ms||data.internal?.total_check_ms||0) + 'ms';
+  if($('net-kpi-db')) $('net-kpi-db').textContent = (data.db?.size_mb||0) + 'MB • ' + (data.kpis?.total_missions||0) + ' missões';
+  if($('net-kpi-ext')) $('net-kpi-ext').textContent = (data.kpis?.external_ok||0) + '/' + (data.kpis?.external_total||0) + ' OK';
+  if($('net-kpi-agents')) $('net-kpi-agents').textContent = (data.kpis?.total_agents||0) + ' agentes • ' + (data.kpis?.total_tools||0) + ' tools';
+  if($('net-kpi-files')) $('net-kpi-files').textContent = (data.workspace?.files_count||0) + ' files • ' + (data.kpis?.total_memories||0) + ' mems';
+  if($('net-time')) $('net-time').textContent = new Date(data.timestamp).toLocaleTimeString('pt-PT');
+  if($('net-agents-count')) $('net-agents-count').textContent = (data.agents?.count||0) + ' agentes';
+  if($('net-tools-count')) $('net-tools-count').textContent = (data.tools?.count||0) + ' tools';
+
+  // Orchestrator flow
+  if(flowEl && data.orchestrator?.flow){
+    flowEl.innerHTML = data.orchestrator.flow.map((step, i)=>{
+      const icons = ['👤','📡','🧠','📋','🗺️','🤖','⚙️','🛠️','✅','💾','💬'];
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;gap:8px;align-items:center"><span style="width:24px;height:24px;background:var(--accentDark);color:white;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800">${i+1}</span><span style="font-size:11px">${step}</span></div>`;
+    }).join('');
+  }
+  if(compEl && data.orchestrator?.components){
+    compEl.innerHTML = Object.entries(data.orchestrator.components).map(([k,v])=>`
+      <div style="padding:6px 0;border-bottom:1px solid var(--bg2)"><b style="font-size:11px">${k}</b><br><span style="font-size:10px;color:var(--text2);font-family:monospace">${v}</span></div>
+    `).join('');
+  }
+
+  // Agents grid
+  if(agentsGrid && data.agents?.detailed){
+    agentsGrid.innerHTML = data.agents.detailed.map(a=>{
+      const iconMap = {research:'🔍', coding_qa:'💻', design:'🎨', business:'📊', browser:'🌐', automation:'⚡', monitor:'◍', builder:'✦'};
+      const icon = iconMap[a.id] || '🤖';
+      return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+            <div style="width:32px;height:32px;background:var(--card);border:1px solid var(--border);border-radius:9px;display:grid;place-items:center;font-size:14px">${icon}</div>
+            <div style="flex:1;min-width:0"><b style="font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</b><span style="font-size:10px;color:var(--text2)">${a.id}</span></div>
+            <span class="green-dot"></span>
+          </div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px">Especialidade: ${a.specialty||'—'}</div>
+          <div style="font-size:10px;color:var(--text3)">Skills: ${(a.skills||[]).join(', ').slice(0,60) || '—'}</div>
+          <div style="font-size:10px;color:var(--text3)">Tools: ${(a.tools||[]).join(', ').slice(0,60) || '—'}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Tools by category
+  if(toolsGrid && data.tools?.by_category){
+    toolsGrid.innerHTML = Object.entries(data.tools.by_category).map(([cat, tools])=>{
+      const catIcon = {filesystem:'📁', web:'🌐', python:'🐍', scheduler:'⏰', browser:'🌐', site:'✦', news:'📰', crypto:'₿', stocks:'📈', dashboard:'📊'}[cat] || '🛠️';
+      return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px">
+          <b style="font-size:11px">${catIcon} ${cat} (${tools.length})</b>
+          <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
+            ${tools.map(t=>`<div style="font-size:10px;padding:3px 6px;background:var(--card);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between"><span>${t.id}</span><span style="color:var(--text3);font-size:9px">${t.risk}</span></div>`).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if(extEl && data.external_apis){
+    extEl.innerHTML = Object.entries(data.external_apis).map(([name, info])=>{
+      const ok = info.ok;
+      const color = ok ? 'var(--green)' : '#d93a00';
+      const bg = ok ? 'var(--greenSoft)' : '#ffe8e8';
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bg2)">
+          <div style="flex:1;min-width:0">
+            <b style="font-size:12px">${name}</b><br>
+            <span style="font-size:10px;color:var(--text2);word-break:break-all">${(info.url||'').slice(0,60)}</span><br>
+            <span style="font-size:10px;color:var(--text3)">${info.status_code ? 'HTTP '+info.status_code : (info.error||'')} • ${info.size||0} bytes</span>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:11px;font-weight:800;color:${color};background:${bg};padding:4px 8px;border-radius:20px">${ok?'✅ OK':'❌ FAIL'}</span><br>
+            <span style="font-size:11px;color:var(--text2);margin-top:4px;display:inline-block">${info.latency_ms||0}ms</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  if(intEl){
+    intEl.innerHTML = `
+      <div style="font-size:12px;line-height:1.6">
+        <div>🗄️ DB: <b>${data.db?.size_mb||0}MB</b> • ${data.db?.path||''}</div>
+        <div>📁 Workspace: <b>${data.workspace?.files_count||0} files</b></div>
+        <div>⚡ Check total: <b>${data.internal?.total_check_ms||0}ms</b></div>
+        <div>🤖 Agentes: <b>${data.agents?.count||0}</b> • 🛠️ Tools: <b>${data.tools?.count||0}</b></div>
+        <div>🧠 Orquestrador: <b>${data.orchestrator?.type||''}</b></div>
+      </div>
+    `;
+  }
+  if(dbCountsEl && data.db?.counts){
+    dbCountsEl.innerHTML = Object.entries(data.db.counts).map(([k,v])=>`
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center"><b style="font-size:13px">${v}</b><br><span style="font-size:9px;color:var(--text2);text-transform:uppercase">${k}</span></div>
+    `).join('');
+  }
+  if(mapEl && data.internal?.endpoints){
+    mapEl.innerHTML = Object.entries(data.internal.endpoints).map(([path, desc])=>`
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px">
+        <b style="font-size:11px">${path}</b><br>
+        <span style="font-size:10px;color:var(--text2)">${desc}</span>
+      </div>
+    `).join('') + (data.internal.routers ? `<div style="grid-column:1/-1;margin-top:8px"><b style="font-size:11px">Routers:</b> <span style="font-size:10px;color:var(--text2)">${data.internal.routers.join(', ')}</span></div>` : '');
+  }
+  // === VISUAL GRAPH ===
+  try{ renderNetworkGraph(data); }catch(e){ console.error('graph error', e); }
+
+  if($('def-stat-agents')) $('def-stat-agents').textContent = data.agents?.count||0;
+  if($('def-stat-tools')) $('def-stat-tools').textContent = data.tools?.count||0;
+  if($('def-stat-missions')) $('def-stat-missions').textContent = data.kpis?.total_missions||0;
+  if($('def-stat-businesses')) $('def-stat-businesses').textContent = data.kpis?.total_businesses||0;
+  if($('def-data-stats')) $('def-data-stats').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center"><b>${data.db?.size_mb||0}MB</b><br><span style="font-size:9px;color:var(--text2)">DB SIZE</span></div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center"><b>${data.workspace?.files_count||0}</b><br><span style="font-size:9px;color:var(--text2)">FILES</span></div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center"><b>${data.kpis?.total_memories||0}</b><br><span style="font-size:9px;color:var(--text2)">MEMÓRIAS</span></div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center"><b>${data.kpis?.external_ok||0}/${data.kpis?.external_total||0}</b><br><span style="font-size:9px;color:var(--text2)">EXT OK</span></div>
+    </div>
+  `;
+  if($('def-ai-agents')) $('def-ai-agents').innerHTML = (data.agents?.detailed||[]).map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--bg2);font-size:12px">🤖 ${a.id} — ${a.name} <span style="color:var(--text3);font-size:10px">${a.specialty}</span></div>`).join('') || '—';
+  if($('def-ai-tools')) $('def-ai-tools').innerHTML = Object.entries(data.tools?.by_category||{}).map(([cat, arr])=>`<div style="margin-bottom:8px"><b style="font-size:11px">${cat} (${arr.length})</b><br>${arr.map(t=>`<span style="font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;margin:2px;display:inline-block">${t.id}</span>`).join('')}</div>`).join('').slice(0,2000) || '—';
+}
+
+async function loadAuditLogs(){
+  const el = $('def-audit-logs');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--text3)">A carregar logs...</div>';
+  const data = await apiFetch('/logs?limit=20');
+  if(data.logs && data.logs.length){
+    el.innerHTML = data.logs.slice(-10).reverse().map(l=>`
+      <div style="padding:6px 0;border-bottom:1px solid var(--bg2)">
+        <b style="font-size:10px">${l.event_type||l.type||'LOG'}</b> <span style="font-size:9px;color:var(--text3)">${new Date(l.timestamp||l.created_at).toLocaleTimeString('pt-PT')}</span><br>
+        <span style="font-size:10px;color:var(--text2)">${(l.details?JSON.stringify(l.details).slice(0,80):l.message||'') }</span>
+      </div>
+    `).join('');
+  } else {
+    el.innerHTML = '<div style="color:var(--text3)">Sem logs ainda</div>';
+  }
+}
+
+async function loadSystem(){
+  const data = await apiFetch('/system/status');
+  if($('system-status')) $('system-status').textContent = JSON.stringify(data,null,2);
+  const dot = $('status-dot');
+  const txt = $('status-text');
+  if(data.ollama?.available){
+    if(dot) dot.classList.remove('off');
+    if(txt) txt.textContent = 'Ollama • Online';
+  } else {
+    if(dot) dot.classList.add('off');
+    if(txt) txt.textContent = 'Local • Leve';
+  }
+  if($('autonomy-level')) $('autonomy-level').value = data.autonomy_level || 2;
+  if($('autonomy-level-2')) $('autonomy-level-2').value = data.autonomy_level || 2;
+  const ollamaInfo = $('ollama-info');
+  if(ollamaInfo && data.ollama){
+    ollamaInfo.textContent = `Ollama: ${data.ollama.available ? '✅ Disponível' : '❌ Indisponível (modo leve)'} 
+Host: ${data.ollama.host}
+Modelo: ${data.ollama.model}
+Modelos disponíveis: ${(data.ollama.models||[]).join(', ') || 'nenhum'}
+
+Ollama é opcional — modo leve funciona sem ele.
+Para chat mais bonito:
+1. Instala https://ollama.com
+2. ollama pull qwen3:8b`;
+  }
+  // === VISUAL GRAPH ===
+  try{ renderNetworkGraph(data); }catch(e){ console.error('graph error', e); }
+
+  if($('def-stat-agents')) $('def-stat-agents').textContent = data.agents?.count||0;
+  if($('def-stat-tools')) $('def-stat-tools').textContent = data.tools?.count||0;
+  loadNetwork();
+  loadDataTab();
+}
+
+// Init
+loadDashboard();
+loadSystem();
+loadBizMissoes();
+</script>
+</body>
+</html>

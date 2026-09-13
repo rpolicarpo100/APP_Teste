@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ai-brain-god
+    env: python
+    region: frankfurt # perto PT
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.main
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: APP_PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: AUTONOMY_LEVEL
+        value: 2
+    healthCheckPath: /health
