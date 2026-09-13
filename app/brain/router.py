@@ -1,6 +1,6 @@
 """
 Brain Router — decide qual agente usar baseado em competências
-GOD §5.3 Agent Registry + §5.5 Scheduler + Provider Health Agent
+GOD §5.3 Agent Registry + §5.5 Scheduler + Provider Health Agent (opcional)
 """
 from typing import Dict, List, Optional
 
@@ -33,7 +33,7 @@ class AgentRegistry:
 agent_registry = AgentRegistry()
 
 def init_default_agents():
-    """Regista os 9 agentes-piloto do Local AI Brain + GOD + Builder + Provider Health"""
+    """Regista os 8-9 agentes-piloto — provider_health opcional para Render"""
     from app.agents.research import ResearchAgent
     from app.agents.coding import CodingAgent
     from app.agents.design import DesignAgent
@@ -42,7 +42,6 @@ def init_default_agents():
     from app.agents.automation import AutomationAgent
     from app.agents.monitor import MonitorAgent
     from app.agents.builder import BuilderAgent
-    from app.agents.provider_health import ProviderHealthAgent
 
     agents = [
         ResearchAgent(),
@@ -52,9 +51,17 @@ def init_default_agents():
         BrowserAgent(),
         AutomationAgent(),
         MonitorAgent(),
-        BuilderAgent(),
-        ProviderHealthAgent()
+        BuilderAgent()
     ]
+    
+    # Provider Health opcional — não crasha se falhar
+    try:
+        from app.agents.provider_health import ProviderHealthAgent
+        agents.append(ProviderHealthAgent())
+        print("[Router] Provider Health Agent registado — 9 agentes")
+    except Exception as e:
+        print(f"[Router] Provider Health Agent não registado (opcional): {e} — continua com 8 agentes")
+
     for ag in agents:
         agent_registry.register(ag)
     return agent_registry

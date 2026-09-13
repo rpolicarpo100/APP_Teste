@@ -25,10 +25,24 @@ import app.tools.browser  # noqa
 import app.tools.site_builder  # noqa — construtor de apps/sites via chat
 import app.tools.news  # noqa — notícias Portugal | Mundo | Mercados | Crypto — REAL
 import app.tools.market_data  # noqa — ganhadores/perdedores Crypto e Ações — REAL
-import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
+
+# Provider health tools opcional
+try:
+    import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
+    print("[Main] Provider Health tools registados")
+except Exception as e:
+    print(f"[Main] Provider Health tools não registados (opcional): {e}")
 
 # Import APIs
-from app.api import chat, tasks, agents, memory, approvals, system, market, businesses, providers
+from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
+
+# Providers router opcional
+try:
+    from app.api import providers
+    providers_available = True
+except Exception as e:
+    print(f"[Main] Providers API não disponível: {e}")
+    providers_available = False
 
 # Inicializa DB
 init_db()
@@ -69,7 +83,8 @@ app.include_router(memory.router, prefix="", tags=["memory"])
 app.include_router(approvals.router, prefix="", tags=["approvals"])
 app.include_router(market.router, prefix="", tags=["market — notícias e ganhadores/perdedores REAL"]) 
 app.include_router(businesses.router, prefix="", tags=["negócios — portfolio dos nossos negócios"])
-app.include_router(providers.router, prefix="", tags=["providers — health check, ranking e failover automático"])
+if providers_available:
+    app.include_router(providers.router, prefix="", tags=["providers — health check, ranking e failover automático"])
 
 # Frontend static + workspace static — para preview de sites construídos via chat
 frontend_path = ROOT_DIR / "frontend"
@@ -96,7 +111,6 @@ if frontend_path.exists():
 
 @app.get("/")
 def root():
-    # Se frontend existe, serve dashboard por defeito? Não, mantém JSON para API, mas adiciona link
     frontend_exists = (ROOT_DIR / "frontend" / "index.html").exists()
     return {
         "app": settings.app_name,
@@ -120,7 +134,7 @@ def main():
     print(f"Ollama: {settings.ollama_host} model={settings.ollama_model}")
     print(f"Agents: {[a.agent_id for a in agent_registry.list_agents()]}")
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
-    # Inicia scheduler para provider health checks periódicos — opcional, desativa no Render free se falhar
+    # Inicia scheduler para provider health checks periódicos — opcional
     import os
     if os.getenv('DISABLE_SCHEDULER') != 'true':
         try:
