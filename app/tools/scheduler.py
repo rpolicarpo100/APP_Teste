@@ -101,7 +101,7 @@ def start_provider_health_scheduler():
             id="provider_health_check",
             name="Provider Health Check - verifica providers a cada 5 min",
             replace_existing=True,
-            next_run_time=datetime.utcnow()
+            next_run_time=None  # Não executa imediatamente, espera 5 min para evitar crash no Render
         )
         
         # Também adiciona job a cada hora para recalcular ranking

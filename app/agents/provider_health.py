@@ -81,6 +81,7 @@ PROVIDERS_CONFIG = {
 }
 
 def ensure_provider_tables():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     cur = conn.cursor()
     cur.execute("""
@@ -129,7 +130,11 @@ def ensure_provider_tables():
     conn.commit()
     conn.close()
 
-ensure_provider_tables()
+try:
+    ensure_provider_tables()
+except Exception as e:
+    print(f"[ProviderHealth] Erro ao criar tabelas: {e}")
+
 
 class ProviderHealthAgent(BaseAgent):
     def __init__(self):
