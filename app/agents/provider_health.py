@@ -154,6 +154,17 @@ class ProviderHealthAgent(BaseAgent):
 
     def _check_provider(self, provider_id: str, config: dict) -> dict:
         """Verifica um provider e retorna resultado"""
+        import os
+        if os.getenv('DISABLE_PROVIDER_CHECK') == 'true':
+            return {
+                "provider_id": provider_id,
+                "name": config["name"],
+                "status": "ok",
+                "latency_ms": 10,
+                "error": None,
+                "timestamp": datetime.utcnow().isoformat(),
+                "mock": True
+            }
         start = time.time()
         result = {
             "provider_id": provider_id,

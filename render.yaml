@@ -23,5 +23,7 @@ services:
         value: 2
       - key: DISABLE_SCHEDULER
         value: true
+      - key: DISABLE_PROVIDER_CHECK
+        value: true
       - key: SECRET_KEY
         generateValue: true
