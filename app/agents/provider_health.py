@@ -138,6 +138,10 @@ except Exception as e:
 
 class ProviderHealthAgent(BaseAgent):
     def __init__(self):
+        try:
+            ensure_provider_tables()
+        except Exception as e:
+            print(f"[ProviderHealth] Erro ensure tables no __init__: {e}")
         super().__init__(
             agent_id="provider_health",
             name="Provider Health & Rank Agent",
@@ -226,6 +230,10 @@ class ProviderHealthAgent(BaseAgent):
 
     def _update_ranking(self, check_result: dict):
         """Atualiza ranking na BD"""
+        try:
+            ensure_provider_tables()
+        except:
+            pass
         conn = sqlite3.connect(str(DB_PATH))
         cur = conn.cursor()
         
