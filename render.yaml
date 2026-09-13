@@ -23,7 +23,3 @@ services:
         value: 2
       - key: SECRET_KEY
         generateValue: true
-    disk:
-      name: ai-brain-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
