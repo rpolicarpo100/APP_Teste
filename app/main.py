@@ -26,31 +26,8 @@ import app.tools.site_builder  # noqa — construtor de apps/sites via chat
 import app.tools.news  # noqa — notícias Portugal | Mundo | Mercados | Crypto — REAL
 import app.tools.market_data  # noqa — ganhadores/perdedores Crypto e Ações — REAL
 
-# Provider health tools opcional — desativa no Render
-import os
-if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
-    try:
-        import app.tools.provider_health  # noqa — verifica providers, failover e ranking por experiência
-        print("[Main] Provider Health tools registados")
-    except Exception as e:
-        print(f"[Main] Provider Health tools não registados (opcional): {e}")
-else:
-    print("[Main] Provider Health tools desativados via DISABLE_PROVIDER_HEALTH=true")
-
 # Import APIs
 from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
-
-# Providers router opcional — desativa no Render
-if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
-    try:
-        from app.api import providers
-        providers_available = True
-    except Exception as e:
-        print(f"[Main] Providers API não disponível: {e}")
-        providers_available = False
-else:
-    print("[Main] Providers API desativada via DISABLE_PROVIDER_HEALTH=true")
-    providers_available = False
 
 # Inicializa DB
 init_db()
@@ -69,7 +46,7 @@ chat.set_orchestrator(orchestrator)
 
 app = FastAPI(
     title=settings.app_name,
-    description="GOD Cerebro Core — Orquestrador Universal de Agentes + Local AI Brain v1.0 + Provider Health Ranking",
+    description="GOD Cerebro Core — Orquestrador Universal de Agentes + Local AI Brain v1.0",
     version="1.0.0"
 )
 
@@ -91,8 +68,6 @@ app.include_router(memory.router, prefix="", tags=["memory"])
 app.include_router(approvals.router, prefix="", tags=["approvals"])
 app.include_router(market.router, prefix="", tags=["market — notícias e ganhadores/perdedores REAL"]) 
 app.include_router(businesses.router, prefix="", tags=["negócios — portfolio dos nossos negócios"])
-if providers_available:
-    app.include_router(providers.router, prefix="", tags=["providers — health check, ranking e failover automático"])
 
 # Frontend static + workspace static — para preview de sites construídos via chat
 frontend_path = ROOT_DIR / "frontend"
@@ -119,6 +94,7 @@ if frontend_path.exists():
 
 @app.get("/")
 def root():
+    # Se frontend existe, serve dashboard por defeito? Não, mantém JSON para API, mas adiciona link
     frontend_exists = (ROOT_DIR / "frontend" / "index.html").exists()
     return {
         "app": settings.app_name,
@@ -128,11 +104,11 @@ def root():
         "dashboard": "/dashboard",
         "dashboard_direct": "/dashboard/",
         "health": "/health",
-        "architecture": "GOD Cerebro Core + Local AI Brain v1.0 + Provider Health Ranking",
+        "architecture": "GOD Cerebro Core + Local AI Brain v1.0",
         "agents": [a.agent_id for a in agent_registry.list_agents()],
         "tools": [t.id for t in tool_registry.list_available()],
         "frontend_exists": frontend_exists,
-        "message": "Abre /dashboard para app leve e bonita com DASHBOARD | CHAT | NEGOCIOS | DEFINIÇÕES + auto-refresh + provider health ranking"
+        "message": "Abre /dashboard para app leve e bonita com DASHBOARD | CHAT | NEGOCIOS | DEFINIÇÕES"
     }
 
 def main():
@@ -142,18 +118,7 @@ def main():
     print(f"Ollama: {settings.ollama_host} model={settings.ollama_model}")
     print(f"Agents: {[a.agent_id for a in agent_registry.list_agents()]}")
     print(f"Tools: {[t.id for t in tool_registry.list_available()]}")
-    # Inicia scheduler para provider health checks periódicos — opcional
-    import os
-    if os.getenv('DISABLE_SCHEDULER') != 'true':
-        try:
-            from app.tools.scheduler import start_provider_health_scheduler
-            start_provider_health_scheduler()
-            print("Provider Health Scheduler iniciado — verifica providers a cada 5 min")
-        except Exception as e:
-            print(f"Scheduler não iniciado: {e}")
-    else:
-        print("Scheduler desativado via DISABLE_SCHEDULER=true")
-    uvicorn.run("app.main:app", host=settings.app_host, port=port, reload=False)
+    uvicorn.run("app.main:app", host=settings.app_host, port=getattr(settings, 'effective_port', settings.app_port), reload=False)
 
 if __name__ == "__main__":
     main()
