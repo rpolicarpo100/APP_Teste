@@ -80,26 +80,30 @@ KPIS_BY_SECTOR = {
 }
 
 def get_kpis_for_sector(sector: str) -> Dict[str, Any]:
-    """Retorna KPIs sugeridos para um setor"""
+    """Retorna KPIs sugeridos para um setor — normaliza para detectar E-commerce com hífen, etc"""
     if not sector:
         return KPIS_BY_SECTOR["default"]
-    sector_lower = sector.lower()
+    # Normaliza: remove hífen, espaços, acentos básicos
+    sector_lower = sector.lower().replace("-", "").replace(" ", "").replace("_", "")
+    sector_original_lower = sector.lower()
+    
+    # Mapeamento direto normalizado
+    if "restaur" in sector_lower or "cafe" in sector_lower or "café" in sector_original_lower:
+        return KPIS_BY_SECTOR["restauração"]
+    if "saas" in sector_lower or "software" in sector_lower:
+        return KPIS_BY_SECTOR["saas"]
+    if "ecommerce" in sector_lower or "e-commerce" in sector_original_lower or "loja" in sector_lower or "shopify" in sector_lower or "expensy" in sector_lower:
+        return KPIS_BY_SECTOR["ecommerce"]
+    if "consult" in sector_lower:
+        return KPIS_BY_SECTOR["consultoria"]
+    if "curso" in sector_lower or "infoproduto" in sector_lower or "formac" in sector_lower or "educa" in sector_lower:
+        return KPIS_BY_SECTOR["infoproduto"]
+    
     for key, config in KPIS_BY_SECTOR.items():
-        if key in sector_lower or sector_lower in key:
+        key_norm = key.lower().replace("-", "").replace(" ", "")
+        if key_norm in sector_lower or sector_lower in key_norm:
             return config
-        # Check aliases
-        if "restaur" in sector_lower and key == "restauração":
-            return config
-        if "café" in sector_lower or "cafe" in sector_lower and key == "restauração":
-            return KPIS_BY_SECTOR["restauração"]
-        if "saas" in sector_lower or "software" in sector_lower:
-            return KPIS_BY_SECTOR["saas"]
-        if "ecommerce" in sector_lower or "loja" in sector_lower:
-            return KPIS_BY_SECTOR["ecommerce"]
-        if "consult" in sector_lower:
-            return KPIS_BY_SECTOR["consultoria"]
-        if "curso" in sector_lower or "infoproduto" in sector_lower or "formação" in sector_lower:
-            return KPIS_BY_SECTOR["infoproduto"]
+    
     return KPIS_BY_SECTOR["default"]
 
 def get_conn():
@@ -107,9 +111,40 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+# Plataformas suportadas para múltiplos links — EXPENSYVX exemplo
+PLATFORMS = {
+    "youtube": {"label": "YouTube", "icon": "▶️", "color": "#FF0000", "placeholder": "https://youtube.com/@..."},
+    "tiktok": {"label": "TikTok", "icon": "🎵", "color": "#000000", "placeholder": "https://tiktok.com/@..."},
+    "instagram": {"label": "Instagram", "icon": "📸", "color": "#E4405F", "placeholder": "https://instagram.com/..."},
+    "shopify": {"label": "Shopify", "icon": "🛍️", "color": "#95BF47", "placeholder": "https://...myshopify.com"},
+    "printify": {"label": "Printify", "icon": "🖨️", "color": "#4A90E2", "placeholder": "https://printify.com/..."},
+    "gumroad": {"label": "Gumroad", "icon": "💰", "color": "#FF90E8", "placeholder": "https://gumroad.com/..."},
+    "website": {"label": "Website", "icon": "🌐", "color": "#111", "placeholder": "https://..."},
+    "facebook": {"label": "Facebook", "icon": "👍", "color": "#1877F2", "placeholder": "https://facebook.com/..."},
+    "twitter": {"label": "X/Twitter", "icon": "🐦", "color": "#000", "placeholder": "https://x.com/..."},
+    "linkedin": {"label": "LinkedIn", "icon": "💼", "color": "#0A66C2", "placeholder": "https://linkedin.com/..."},
+    "etsy": {"label": "Etsy", "icon": "🛒", "color": "#F56400", "placeholder": "https://etsy.com/..."},
+    "amazon": {"label": "Amazon", "icon": "📦", "color": "#FF9900", "placeholder": "https://amazon.com/..."},
+    "other": {"label": "Outro", "icon": "🔗", "color": "#888", "placeholder": "https://..."}
+}
+
 def ensure_businesses_table():
     conn = get_conn()
     cur = conn.cursor()
+    # Tabela business_links — múltiplos links por negócio (EXPENSYVX: youtube, tiktok, insta, shopify, printify, gumroad)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS business_links (
+        id TEXT PRIMARY KEY,
+        business_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        url TEXT NOT NULL,
+        label TEXT,
+        is_primary INTEGER DEFAULT 0,
+        clicks INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(business_id) REFERENCES businesses(id) ON DELETE CASCADE
+    )
+    """)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS businesses (
         id TEXT PRIMARY KEY,
@@ -202,7 +237,27 @@ class BusinessUpdate(BaseModel):
     kpis_config: Optional[str] = None
     custom_kpis: Optional[str] = None
 
-def row_to_dict(row):
+def get_business_links(business_id: str) -> List[Dict[str, Any]]:
+    """Retorna todos os links de um negócio"""
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM business_links WHERE business_id=? ORDER BY is_primary DESC, platform ASC", (business_id,))
+        links = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        # Enriquece com config da plataforma
+        for link in links:
+            plat = link.get('platform', 'other')
+            cfg = PLATFORMS.get(plat, PLATFORMS['other'])
+            link['platform_label'] = cfg['label']
+            link['platform_icon'] = cfg['icon']
+            link['platform_color'] = cfg['color']
+        return links
+    except Exception as e:
+        print(f"[BusinessLinks] Erro ao buscar links: {e}")
+        return []
+
+def row_to_dict(row, include_links: bool = True):
     d = dict(row)
     # calcula margem e lucro
     rev = d.get('revenue_monthly') or 0
@@ -243,7 +298,30 @@ def row_to_dict(row):
         **custom
     }
     
+    # Links múltiplos — EXPENSYVX exemplo
+    if include_links and d.get('id'):
+        try:
+            d['links'] = get_business_links(d['id'])
+            d['links_count'] = len(d['links'])
+            # Agrupa por plataforma
+            by_platform = {}
+            for link in d['links']:
+                plat = link.get('platform')
+                if plat not in by_platform:
+                    by_platform[plat] = []
+                by_platform[plat].append(link)
+            d['links_by_platform'] = by_platform
+        except:
+            d['links'] = []
+            d['links_count'] = 0
+            d['links_by_platform'] = {}
+    
     return d
+
+@router.get("/businesses/platforms")
+def platforms_list():
+    """Lista plataformas suportadas para múltiplos links — EXPENSYVX: youtube, tiktok, insta, shopify, printify, gumroad"""
+    return {"platforms": PLATFORMS, "count": len(PLATFORMS)}
 
 @router.get("/businesses/kpis/suggestions")
 def kpis_suggestions(sector: str = None):
@@ -454,6 +532,140 @@ def business_dashboard(business_id: str):
             "suggested": business.get('kpis_config_parsed', {})
         }
     }
+
+# === BUSINESS LINKS — múltiplos links por negócio (EXPENSYVX: youtube, tiktok, insta, shopify, printify, gumroad) ===
+
+class BusinessLinkCreate(BaseModel):
+    platform: str  # youtube, tiktok, instagram, shopify, printify, gumroad, website, etc
+    url: str
+    label: Optional[str] = None
+    is_primary: Optional[bool] = False
+
+class BusinessLinkUpdate(BaseModel):
+    platform: Optional[str] = None
+    url: Optional[str] = None
+    label: Optional[str] = None
+    is_primary: Optional[bool] = None
+
+@router.get("/businesses/{business_id}/links")
+def list_business_links(business_id: str):
+    """Lista todos os links de um negócio — EXPENSYVX tem 6+ links"""
+    ensure_businesses_table()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    if not cur.fetchone():
+        conn.close()
+        return {"error": "Negócio não encontrado"}
+    conn.close()
+    links = get_business_links(business_id)
+    return {"business_id": business_id, "links": links, "count": len(links), "platforms": PLATFORMS}
+
+@router.post("/businesses/{business_id}/links")
+def create_business_link(business_id: str, data: BusinessLinkCreate):
+    """Adiciona link a um negócio — ex: EXPENSYVX + youtube"""
+    ensure_businesses_table()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    if not cur.fetchone():
+        conn.close()
+        return {"error": "Negócio não encontrado"}
+    
+    if data.platform not in PLATFORMS:
+        # Permite custom mas avisa
+        if data.platform not in ["custom", "other"]:
+            # Auto-mapeia para other se não conhecido
+            pass
+    
+    link_id = str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    cur.execute("""
+        INSERT INTO business_links (id, business_id, platform, url, label, is_primary, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (link_id, business_id, data.platform, data.url, data.label, 1 if data.is_primary else 0, now))
+    
+    # Se é primary, remove primary dos outros
+    if data.is_primary:
+        cur.execute("UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
+    
+    conn.commit()
+    cur.execute("SELECT * FROM business_links WHERE id=?", (link_id,))
+    row = cur.fetchone()
+    conn.close()
+    
+    link = dict(row) if row else {}
+    plat_cfg = PLATFORMS.get(link.get('platform', 'other'), PLATFORMS['other'])
+    link['platform_label'] = plat_cfg['label']
+    link['platform_icon'] = plat_cfg['icon']
+    
+    return {"link": link, "status": "created", "business_id": business_id}
+
+@router.put("/businesses/{business_id}/links/{link_id}")
+def update_business_link(business_id: str, link_id: str, data: BusinessLinkUpdate):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
+    if not cur.fetchone():
+        conn.close()
+        return {"error": "Link não encontrado"}
+    
+    fields = []
+    values = []
+    for k, v in data.dict(exclude_unset=True).items():
+        if v is not None:
+            if k == 'is_primary':
+                fields.append("is_primary=?")
+                values.append(1 if v else 0)
+            else:
+                fields.append(f"{k}=?")
+                values.append(v)
+    
+    if fields:
+        values.append(link_id)
+        cur.execute(f"UPDATE business_links SET {', '.join(fields)} WHERE id=?", values)
+        if data.is_primary:
+            cur.execute("UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
+        conn.commit()
+    
+    cur.execute("SELECT * FROM business_links WHERE id=?", (link_id,))
+    row = cur.fetchone()
+    conn.close()
+    return {"link": dict(row) if row else {}, "status": "updated"}
+
+@router.delete("/businesses/{business_id}/links/{link_id}")
+def delete_business_link(business_id: str, link_id: str):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
+    conn.commit()
+    conn.close()
+    return {"status": "deleted", "link_id": link_id, "business_id": business_id}
+
+@router.post("/businesses/{business_id}/links/bulk")
+def bulk_create_links(business_id: str, links: List[BusinessLinkCreate]):
+    """Cria múltiplos links de uma vez — ideal para EXPENSYVX com 6 links"""
+    ensure_businesses_table()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    if not cur.fetchone():
+        conn.close()
+        return {"error": "Negócio não encontrado"}
+    
+    created = []
+    for data in links:
+        link_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+        cur.execute("""
+            INSERT INTO business_links (id, business_id, platform, url, label, is_primary, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (link_id, business_id, data.platform, data.url, data.label, 1 if data.is_primary else 0, now))
+        created.append({"id": link_id, "platform": data.platform, "url": data.url})
+    
+    conn.commit()
+    conn.close()
+    return {"created": created, "count": len(created), "business_id": business_id}
 
 @router.post("/businesses/{business_id}/kpis")
 def update_business_kpis(business_id: str, kpis: Dict[str, Any]):

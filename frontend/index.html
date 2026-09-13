@@ -559,6 +559,7 @@
                 <div style="margin-top:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:12px">
                   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:6px">Descrição</div>
                   <div id="detail-desc" style="font-size:13px;line-height:1.5">—</div>
+                  <div id="detail-links" style="margin-top:12px"></div>
                   <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
                     <span id="detail-sector" style="font-size:10px;padding:4px 8px;background:var(--bg2);border-radius:20px;border:1px solid var(--border)">—</span>
                     <span id="detail-website" style="font-size:10px"></span>
@@ -625,7 +626,33 @@
             <div class="field"><label>Segmento cliente</label><input id="m-segment" placeholder="Ex: Traders iniciantes"></div>
             <div class="field"><label>Canal</label><input id="m-channel" placeholder="Ex: SEO, YouTube"></div>
           </div>
-          <div class="field"><label>Website URL</label><input id="m-website" placeholder="https://..."></div>
+          <div class="field"><label>Website URL (principal)</label><input id="m-website" placeholder="https://..."></div>
+          <div class="field">
+            <label>🔗 Links Múltiplos — EXPENSYVX exemplo: youtube, tiktok, instagram, shopify, printify, gumroad</label>
+            <div id="m-links-container" style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+              <!-- Links serão adicionados aqui -->
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+              <select id="m-link-platform" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+                <option value="youtube">▶️ YouTube</option>
+                <option value="tiktok">🎵 TikTok</option>
+                <option value="instagram">📸 Instagram</option>
+                <option value="shopify">🛍️ Shopify</option>
+                <option value="printify">🖨️ Printify</option>
+                <option value="gumroad">💰 Gumroad</option>
+                <option value="website">🌐 Website</option>
+                <option value="facebook">👍 Facebook</option>
+                <option value="twitter">🐦 X/Twitter</option>
+                <option value="linkedin">💼 LinkedIn</option>
+                <option value="etsy">🛒 Etsy</option>
+                <option value="amazon">📦 Amazon</option>
+                <option value="other">🔗 Outro</option>
+              </select>
+              <input id="m-link-url" placeholder="https://..." style="flex:2;min-width:200px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px">
+              <button class="btn" style="background:var(--card);border:1px solid var(--border);font-size:11px" onclick="addLinkToForm()">+ Add</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Adiciona youtube, tiktok, instagram, shopify, printify, gumroad — cada negócio pode ter vários</div>
+          </div>
           <div class="field"><label>Tags (vírgula)</label><input id="m-tags" placeholder="trading, gratuito, portugal"></div>
           <div class="field"><label>Notas internas</label><textarea id="m-notes" placeholder="Notas..."></textarea></div>
           <button class="btn" style="background:var(--accentDark);color:white;width:100%;justify-content:center;margin-top:12px" onclick="saveBusiness()">💾 Guardar negócio</button>
@@ -1436,6 +1463,7 @@ function closeBusinessModal(){
   $('business-modal').classList.add('hidden');
   editingBusinessId = null;
   $('m-result').textContent = '';
+  clearTempLinks();
 }
 
 function quickEditBusiness(id){
@@ -1471,6 +1499,50 @@ async function suggestKPIs(){
   }catch(e){ console.error('kpi suggest error', e); }
 }
 
+let tempLinks = []; // Links temporários ao criar/editar
+
+function addLinkToForm(){
+  const plat = $('m-link-platform').value;
+  const url = $('m-link-url').value.trim();
+  if(!url){ alert('URL obrigatória'); return; }
+  if(!url.startsWith('http')){ alert('URL deve começar com http:// ou https://'); return; }
+  tempLinks.push({platform: plat, url: url, label: ''});
+  $('m-link-url').value = '';
+  renderTempLinks();
+}
+
+function renderTempLinks(){
+  const container = $('m-links-container');
+  if(!container) return;
+  if(tempLinks.length===0){
+    container.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px;background:var(--bg);border:1px dashed var(--border);border-radius:8px">Nenhum link adicional — adiciona youtube, tiktok, instagram, shopify, printify, gumroad</div>';
+    return;
+  }
+  const platformIcons = {youtube:'▶️', tiktok:'🎵', instagram:'📸', shopify:'🛍️', printify:'🖨️', gumroad:'💰', website:'🌐', facebook:'👍', twitter:'🐦', linkedin:'💼', etsy:'🛒', amazon:'📦', other:'🔗'};
+  container.innerHTML = tempLinks.map((link, idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <div style="display:flex;gap:8px;align-items:center;flex:1;min-width:0">
+        <span style="font-size:14px">${platformIcons[link.platform]||'🔗'}</span>
+        <div style="flex:1;min-width:0">
+          <b style="font-size:11px">${link.platform}</b><br>
+          <span style="font-size:10px;color:var(--text2);word-break:break-all">${link.url.slice(0,50)}</span>
+        </div>
+      </div>
+      <button class="btn" style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);font-size:10px" onclick="removeTempLink(${idx})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeTempLink(idx){
+  tempLinks.splice(idx, 1);
+  renderTempLinks();
+}
+
+function clearTempLinks(){
+  tempLinks = [];
+  renderTempLinks();
+}
+
 async function saveBusiness(){
   const payload = {
     name: $('m-name').value.trim(),
@@ -1486,6 +1558,8 @@ async function saveBusiness(){
     tags: $('m-tags').value.trim(),
     notes: $('m-notes').value.trim()
   };
+  // Guarda links temporários para criar após negócio
+  const linksToCreate = [...tempLinks];
   if(!payload.name){ $('m-result').textContent = 'Nome obrigatório'; return; }
 
   $('m-result').textContent = 'A guardar...';
@@ -1498,6 +1572,15 @@ async function saveBusiness(){
 
   if(res.business){
     $('m-result').textContent = '✅ Guardado: ' + res.business.name;
+    // Cria links múltiplos se houver — EXPENSYVX exemplo
+    if(linksToCreate.length > 0 && res.business.id){
+      try{
+        $('m-result').textContent = `✅ Negócio guardado, a criar ${linksToCreate.length} links...`;
+        await apiFetch(`/businesses/${res.business.id}/links/bulk`, {method:'POST', body:JSON.stringify(linksToCreate)});
+        $('m-result').textContent = `✅ Guardado: ${res.business.name} + ${linksToCreate.length} links`;
+      }catch(e){ console.error('Erro ao criar links', e); }
+    }
+    clearTempLinks();
     closeBusinessModal();
     await loadBusinesses();
     if(res.business.id) selectBusiness(res.business.id);
