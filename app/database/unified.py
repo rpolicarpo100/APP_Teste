@@ -29,7 +29,7 @@ def _get_pg_conn():
     url = os.getenv('DATABASE_URL')
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
-    conn = psycopg2.connect(url)
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
     conn.autocommit = False
     return conn
 
@@ -87,18 +87,17 @@ def fetchone(cur):
     if row is None:
         return None
     if is_postgres():
-        # psycopg2 RealDictRow ou tuple?
-        if isinstance(row, dict):
-            return row
-        # Se for tuple, precisamos converter — mas usamos RealDictCursor em get_conn? No unified usamos default cursor
-        # Para compat, vamos usar dict se possível
+        # RealDictCursor já retorna dict-like
         try:
-            # tenta dict(row)
             return dict(row)
-        except:
-            return row
+        except Exception:
+            # fallback tuple + description
+            try:
+                cols = [d[0] for d in cur.description]
+                return dict(zip(cols, row))
+            except:
+                return row
     else:
-        # sqlite Row -> dict
         try:
             return dict(row)
         except:
@@ -109,18 +108,14 @@ def fetchall(cur):
     result = []
     for r in rows:
         if is_postgres():
-            if isinstance(r, dict):
-                result.append(r)
-            else:
+            try:
+                result.append(dict(r))
+            except Exception:
                 try:
-                    result.append(dict(r))
+                    cols = [d[0] for d in cur.description]
+                    result.append(dict(zip(cols, r)))
                 except:
-                    # Se tuple, retorna como dict via description
-                    try:
-                        cols = [d[0] for d in cur.description]
-                        result.append(dict(zip(cols, r)))
-                    except:
-                        result.append(r)
+                    result.append(r)
         else:
             try:
                 result.append(dict(r))
