@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-brain-god
+    name: ai-brain-god-v2
     env: python
     region: frankfurt
     plan: starter
@@ -31,6 +31,6 @@ services:
       - key: DISABLE_TOOLS_HEALTH
         value: false
     disk:
-      name: ai-brain-data
+      name: ai-brain-data-v2
       mountPath: /opt/render/project/src/data
       sizeGB: 1
