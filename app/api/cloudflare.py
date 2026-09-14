@@ -138,6 +138,43 @@ def r2_setup(req: CloudflareR2SetupRequest):
     except Exception as e:
         return {"ok": False, "error": str(e), "account_id": account_id[:10] + "..." if account_id else None}
 
+@router.get("/cloudflare/r2/tls-test")
+def r2_tls_test():
+    """Testa TLS handshake para R2 endpoint — debug SSLV3_ALERT_HANDSHAKE_FAILURE"""
+    import ssl
+    import sys
+    import httpx
+    results = {
+        "openssl_version": ssl.OPENSSL_VERSION,
+        "python_version": sys.version,
+        "tests": []
+    }
+    endpoints = [
+        "https://2994d6fc57ed22ae8ad47c3525cc3dae.r2.cloudflarestorage.com/",
+        "https://r2.cloudflarestorage.com/",
+        "https://cloudflare.com/",
+        "https://api.cloudflare.com/",
+        "https://www.google.com/"
+    ]
+    for ep in endpoints:
+        try:
+            with httpx.Client(timeout=10, verify=True) as c:
+                r = c.get(ep)
+                results["tests"].append({"endpoint": ep, "status": r.status_code, "ok": True, "headers": dict(list(r.headers.items())[:3])})
+        except Exception as e:
+            results["tests"].append({"endpoint": ep, "ok": False, "error": str(e)[:500]})
+    
+    # Also test with verify=False
+    try:
+        with httpx.Client(timeout=10, verify=False) as c:
+            r = c.get("https://2994d6fc57ed22ae8ad47c3525cc3dae.r2.cloudflarestorage.com/", headers={"Host": "2994d6fc57ed22ae8ad47c3525cc3dae.r2.cloudflarestorage.com"})
+            results["tests"].append({"endpoint": "R2 with verify=False", "status": r.status_code, "ok": True})
+    except Exception as e:
+        results["tests"].append({"endpoint": "R2 with verify=False", "ok": False, "error": str(e)[:500]})
+    
+    return results
+
+
 @router.post("/cloudflare/workers/deploy")
 def workers_deploy(req: CloudflareDeployRequest):
     return cloudflare_workers_deploy(filename=req.filename)
