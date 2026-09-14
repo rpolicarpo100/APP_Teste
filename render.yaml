@@ -5,21 +5,9 @@ services:
     region: frankfurt
     plan: starter
     branch: main
-    buildCommand: pip install -r requirements.render.txt
-    startCommand: python -m app.main
+    buildCommand: pip install fastapi uvicorn
+    startCommand: uvicorn app.main_minimal:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
-      - key: APP_ENV
-        value: production
-      - key: APP_HOST
-        value: 0.0.0.0
-      - key: APP_PORT
-        value: 10000
-      - key: PORT
-        value: 10000
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: AUTONOMY_LEVEL
-        value: 2
-      - key: SECRET_KEY
-        generateValue: true
