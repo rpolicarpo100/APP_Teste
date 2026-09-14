@@ -1,5 +1,5 @@
 """
-Brain Router — 8-9 agentes, provider_health opcional para Render
+Brain Router — 8-10 agentes, provider_health e tools_health opcionais para Render
 """
 from typing import Dict
 import os
@@ -55,6 +55,17 @@ def init_default_agents():
             print(f"[Router] Provider Health não registado: {e} — 8 agentes")
     else:
         print("[Router] Provider Health desativado via env — 8 agentes")
+
+    # Tools Health opcional — similar ao provider mas para tools
+    if os.getenv('DISABLE_TOOLS_HEALTH') != 'true':
+        try:
+            from app.agents.tools_health import ToolsHealthAgent
+            agents.append(ToolsHealthAgent())
+            print(f"[Router] Tools Health Agent registado — {len(agents)} agentes")
+        except Exception as e:
+            print(f"[Router] Tools Health não registado: {e} — {len(agents)} agentes")
+    else:
+        print(f"[Router] Tools Health desativado via env — {len(agents)} agentes")
 
     for ag in agents:
         agent_registry.register(ag)
