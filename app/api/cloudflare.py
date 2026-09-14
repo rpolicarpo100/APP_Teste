@@ -18,6 +18,12 @@ class CloudflareUploadRequest(BaseModel):
     filename: Optional[str] = None
     all: bool = False
 
+class CloudflareR2SetupRequest(BaseModel):
+    account_id: Optional[str] = None
+    access_key_id: Optional[str] = None
+    secret_access_key: Optional[str] = None
+    bucket: Optional[str] = None
+
 class CloudflareDeployRequest(BaseModel):
     filename: Optional[str] = None
 
@@ -45,6 +51,78 @@ def r2_upload(req: CloudflareUploadRequest):
 @router.get("/cloudflare/r2/upload")
 def r2_upload_get(filename: Optional[str] = None, all: bool = False):
     return cloudflare_r2_upload(filename=filename, all=all)
+
+@router.post("/cloudflare/r2/setup")
+def r2_setup(req: CloudflareR2SetupRequest):
+    """Setup R2 bucket com keys via body — cria bucket ai-brain-workspace e testa upload — para usar quando env vars ainda não setadas em Render"""
+    import os
+    from pathlib import Path
+    # Usa keys do body ou fallback env vars
+    account_id = req.account_id or os.getenv('R2_ACCOUNT_ID') or os.getenv('CLOUDFLARE_ACCOUNT_ID')
+    access_key = req.access_key_id or os.getenv('R2_ACCESS_KEY_ID')
+    secret_key = req.secret_access_key or os.getenv('R2_SECRET_ACCESS_KEY')
+    bucket = req.bucket or os.getenv('R2_BUCKET', 'ai-brain-workspace')
+    
+    if not account_id or not access_key or not secret_key:
+        return {"ok": False, "error": "Falta account_id + access_key_id + secret_access_key — envia via body ou seta env vars R2_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY"}
+    
+    try:
+        import boto3
+        from botocore.config import Config
+        s3 = boto3.client(
+            's3',
+            endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name='auto',
+            config=Config(signature_version='s3v4')
+        )
+        # Try list buckets
+        buckets = []
+        try:
+            resp = s3.list_buckets()
+            buckets = [b['Name'] for b in resp.get('Buckets', [])]
+        except Exception as e:
+            buckets = [f"list error: {e}"]
+        
+        # Try create bucket
+        create_result = None
+        try:
+            s3.create_bucket(Bucket=bucket)
+            create_result = f"Bucket {bucket} criado OK"
+        except Exception as e:
+            err = str(e)
+            if "BucketAlreadyOwnedByYou" in err or "BucketAlreadyExists" in err or "already" in err.lower():
+                create_result = f"Bucket {bucket} já existe — OK"
+            else:
+                create_result = f"Create bucket error: {err[:500]}"
+        
+        # Try upload test file
+        upload_result = None
+        try:
+            from app.config.settings import ROOT_DIR, settings
+            ws = ROOT_DIR / settings.workspace_path
+            ws.mkdir(parents=True, exist_ok=True)
+            test_file = ws / "r2_test.html"
+            test_file.write_text(f"<h1>R2 OK {bucket}</h1><p>Test {account_id}</p>", encoding='utf-8')
+            s3.upload_file(str(test_file), bucket, "r2_test.html", ExtraArgs={'ContentType': 'text/html'})
+            upload_result = f"Upload r2_test.html OK para {bucket}"
+        except Exception as e:
+            upload_result = f"Upload error: {e}"
+        
+        return {
+            "ok": True,
+            "account_id": account_id[:10] + "...",
+            "bucket": bucket,
+            "buckets_existing": buckets,
+            "create_result": create_result,
+            "upload_result": upload_result,
+            "endpoint": f"https://{account_id}.r2.cloudflarestorage.com",
+            "public_url": f"https://{bucket}.{account_id}.r2.dev/r2_test.html ou https://pub-{account_id}.r2.dev/r2_test.html",
+            "message": f"R2 {bucket} setup — se OK, adiciona env vars em Render: R2_ACCOUNT_ID={account_id} R2_ACCESS_KEY_ID=xxx R2_SECRET_ACCESS_KEY=xxx R2_BUCKET={bucket}"
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e), "account_id": account_id[:10] + "..." if account_id else None}
 
 @router.post("/cloudflare/workers/deploy")
 def workers_deploy(req: CloudflareDeployRequest):
