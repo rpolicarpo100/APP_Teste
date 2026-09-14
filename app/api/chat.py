@@ -144,6 +144,22 @@ def chat(request: ChatRequest):
     # Detecta intenção de construir app/site
     is_build, tipo, estilo = detect_build_intent(request.message)
     
+    # NOVO: 2 tabs CHAT | AGENT — CHAT faz tudo menos construir, AGENT só constrói
+    mode = (request.context or {}).get('mode', 'chat')
+    force_build = (request.context or {}).get('force_build', False)
+    no_build = (request.context or {}).get('no_build', False)
+    
+    if mode == 'chat' or no_build:
+        is_build = False
+    if mode == 'agent' or force_build:
+        is_build = True
+        if 'youtube' in request.message.lower() or 'deadly' in request.message.lower():
+            tipo = 'youtube-site'
+            estilo = 'gamer escuro épico'
+        if 'ai' in request.message.lower() or 'ia' in request.message.lower() or 'bot' in request.message.lower():
+            if tipo == 'site':
+                tipo = 'ai'
+    
     mission_id = None
     artifacts = []
     built_url = None
