@@ -14,6 +14,19 @@ from app.brain.router import init_default_agents, agent_registry
 from app.tools.registry import tool_registry
 from app.brain.executor import Executor
 from app.brain.orchestrator import Orchestrator
+# Rate limit custo 0
+try:
+    from slowapi import Limiter
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.middleware import SlowAPIMiddleware
+    from app.security.rate_limit import limiter, rate_limit_exceeded_handler
+except Exception as e:
+    print(f"[Main] Rate limit import fail: {e} — sem rate limit")
+    limiter = None
+    rate_limit_exceeded_handler = None
+    SlowAPIMiddleware = None
+    RateLimitExceeded = Exception
 
 import app.tools.filesystem
 import app.tools.web
@@ -80,10 +93,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Rate limit
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
+# Rate limit — 10/min para /chat
+try:
+    if limiter and rate_limit_exceeded_handler and SlowAPIMiddleware:
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+        app.add_middleware(SlowAPIMiddleware)
+        print("[Main] Rate limit OK — 10/min para /chat")
+    else:
+        print("[Main] Rate limit desativado")
+except Exception as e:
+    print(f"[Main] Rate limit setup fail: {e}")
 
 app.add_middleware(
     CORSMiddleware,
