@@ -97,10 +97,17 @@ def chat(request: ChatRequest):
     conversation_id = request.conversation_id or str(uuid.uuid4())
     db_path = get_db_path()
 
-    # Persiste mensagem user
+    # Persiste mensagem user — cria DB e tabelas se não existirem (Render ephemeral)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     try:
+        conn.execute("""CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY, user_id TEXT, title TEXT, created_at TEXT
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, created_at TEXT
+        )""")
         conn.execute("INSERT OR IGNORE INTO conversations (id, user_id, title, created_at) VALUES (?, ?, ?, ?)",
                      (conversation_id, request.user_id, request.message[:50], datetime.utcnow().isoformat()))
         msg_id = str(uuid.uuid4())
@@ -226,6 +233,9 @@ def chat(request: ChatRequest):
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     try:
+        conn.execute("""CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, created_at TEXT
+        )""")
         resp_id = str(uuid.uuid4())
         conn.execute("INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
                      (resp_id, conversation_id, "assistant", assistant_content, datetime.utcnow().isoformat()))
