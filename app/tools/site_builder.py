@@ -307,7 +307,19 @@ def site_builder(objective: str, style: str = "moderno minimalista", brand: str 
         # URL para preview — via /workspace static mount
         url = f"/workspace/{filename}"
 
-        return {
+        # Builder tem workspace limitado, mas é capaz de fazer deploy se tiver a info
+        deploy_info = None
+        try:
+            from app.tools.deploy import site_deploy, _get_available_platforms
+            platforms = _get_available_platforms()
+            if platforms:
+                # Tenta deploy automático se tem token
+                deploy_result = site_deploy(filename=filename, platform="auto", message=f"Deploy {filename} via Builder")
+                deploy_info = deploy_result
+        except Exception as e:
+            deploy_info = {"deployed": False, "error": str(e)}
+
+        result = {
             "path": str(filepath),
             "filename": filename,
             "url": url,
@@ -318,5 +330,15 @@ def site_builder(objective: str, style: str = "moderno minimalista", brand: str 
             "built": True,
             "message": f"Site construído: {filename} — {len(html)} bytes — leve e bonito"
         }
+        
+        if deploy_info:
+            result["deploy"] = deploy_info
+            if deploy_info.get("deployed"):
+                result["message"] += f" — Deploy OK: {deploy_info.get('url')}"
+                result["deployed_url"] = deploy_info.get("url")
+            else:
+                result["deploy_available"] = deploy_info.get("available_platforms", [])
+        
+        return result
     except Exception as e:
         return {"error": str(e), "built": False, "objective": objective}

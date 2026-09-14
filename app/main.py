@@ -21,6 +21,8 @@ import app.tools.python
 import app.tools.scheduler
 import app.tools.browser
 import app.tools.site_builder
+import app.tools.workspace_ranking
+import app.tools.deploy
 import app.tools.news
 import app.tools.market_data
 
@@ -94,6 +96,14 @@ app.include_router(memory.router, prefix="", tags=["memory"])
 app.include_router(approvals.router, prefix="", tags=["approvals"])
 app.include_router(market.router, prefix="", tags=["market"])
 app.include_router(businesses.router, prefix="", tags=["negocios"])
+# Workspace ranking + deploy + session close — Builder limitado mas faz deploy se tiver info, após sessão ranking
+try:
+    from app.api.workspace import router as workspace_router
+    app.include_router(workspace_router, prefix="", tags=["workspace"])
+    print("[Main] Workspace Ranking + Deploy + Session Close OK — 3 novos endpoints")
+except Exception as e:
+    print(f"[Main] Workspace router fail: {e}")
+
 if providers_available:
     app.include_router(providers.router, prefix="", tags=["providers"])
 if tools_health_available:
