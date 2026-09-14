@@ -374,7 +374,7 @@ class ProviderHealthAgent(BaseAgent):
         
         # Top 3 ranking
         top3 = rankings[:3]
-        summary += f"Top ranking: {', '.join([f'{r['provider_id']}({r['score']})' for r in top3])}"
+        summary += "Top ranking: " + ", ".join([f"{r['provider_id']}({r['score']})" for r in top3])
         
         return TaskOutput(
             task_id=task_input.task_id,
