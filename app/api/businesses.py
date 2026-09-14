@@ -150,8 +150,8 @@ def _execute(cur, query, params=None):
         # Convert ? to %s for Postgres
         query = query.replace('?', '%s')
     if params is None:
-        return _execute(cur, query)
-    return _execute(cur, query, params)
+        return cur.execute(query)
+    return cur.execute(query, params)
 
 
 def _row_to_dict(row, cur=None):
