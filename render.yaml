@@ -23,12 +23,6 @@ services:
         value: 2
       - key: SECRET_KEY
         generateValue: true
-      - key: DISABLE_SCHEDULER
-        value: true
-      - key: DISABLE_PROVIDER_HEALTH
-        value: true
-      - key: DISABLE_TOOLS_HEALTH
-        value: true
     disk:
       name: ai-brain-data
       mountPath: /opt/render/project/src/data
