@@ -11,7 +11,7 @@ from app.models.ollama import ollama_client
 class GroqClient:
     def __init__(self):
         self.api_key = os.getenv('GROQ_API_KEY')
-        self.model = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')  # free tier model
+        self.model = os.getenv('GROQ_MODEL', 'groq/compound-mini')  # free tier model
         self.base = "https://api.groq.com/openai/v1"
 
     def is_available(self) -> bool:
@@ -97,7 +97,7 @@ class GeminiClient:
 class OpenRouterClient:
     def __init__(self):
         self.api_key = os.getenv('OPENROUTER_API_KEY')
-        self.model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free')
+        self.model = os.getenv('OPENROUTER_MODEL', 'nvidia/nemotron-3.5-lightning:free')
         self.base = "https://openrouter.ai/api/v1"
 
     def is_available(self) -> bool:
