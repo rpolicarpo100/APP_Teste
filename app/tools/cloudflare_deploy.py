@@ -20,7 +20,7 @@ from app.config.settings import ROOT_DIR, settings
 def _get_cf_config():
     token = os.getenv('CLOUDFLARE_API_TOKEN') or os.getenv('CF_API_TOKEN') or os.getenv('CLOUDFLARE_API_KEY')
     account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID') or os.getenv('CF_ACCOUNT_ID')
-    gateway_id = os.getenv('CLOUDFLARE_GATEWAY_ID') or os.getenv('CF_GATEWAY_ID')
+    gateway_id = os.getenv('CLOUDFLARE_GATEWAY_ID') or os.getenv('CF_GATEWAY_ID') or 'default'  # default exists and works with cfut_f6DN... token
     return {
         "token": token,
         "account_id": account_id,
