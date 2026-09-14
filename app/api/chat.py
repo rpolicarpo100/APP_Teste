@@ -250,9 +250,16 @@ def chat(request: ChatRequest):
             assistant_content = f"Erro ao construir {tipo} via chat: {str(e)} — mas missão {mission_id} foi criada. Verifica /tasks/{mission_id}"
 
     if not assistant_content:
-        # Modo normal — tenta LLM universal: Ollama -> Groq free (14.4k/dia) -> Gemini free (60/min) -> OpenRouter free -> fallback
+        # Modo normal — tenta LLM universal com system prompt diferente por tab CHAT|AGENT
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
-        llm_resp = llm_client.chat(messages, system_prompt="És o GOD Cerebro Core, orquestrador universal com 10 agentes e 29 tools. Se user pedir para criar app/site, explica que consegues construir via chat com Builder Agent e que vai gerar ficheiro HTML leve e bonito em /workspace. Responde de forma útil, técnica e directa. PT-PT. Custo 0: Groq, Gemini, Neon DB.")
+        if mode == 'chat':
+            sys_prompt = "És o GOD Cerebro Core no modo CHAT — 10 agentes, 29 tools, Neon DB, Groq+Gemini. Fazes tudo MAS NÃO constróis sites/apps/AI. Se user pedir para criar site/app/AI/YouTube, explica que deve ir para tab AGENT BUILDER que só constrói, com Builder Agent que gera HTML leve e bonito gamer épico em /workspace com preview. Nunca digas 'Como funciona' nem peças lista de requisitos. Responde de forma útil, técnica e directa PT-PT. Custo 0: Groq, Gemini, Neon DB. Se user perguntar sobre canal Deadly Gods Portugal YouTube, analisa e dá sugestões (não constrói)."
+        elif mode == 'agent':
+            sys_prompt = "És o GOD Cerebro Core no modo AGENT BUILDER — só constróis sites/apps/AI. 10 agentes, 29 tools, Builder Agent com site.builder tool REAL que gera HTML leve e bonito 12KB em /workspace com preview instantâneo. Se user pedir para criar site YouTube Deadly Gods Portugal, já está a ser construído via Builder Agent. Estilos: gamer escuro épico para YouTube, moderno minimalista, AI Assistant. Responde curto confirmando construção PT-PT. Custo 0: Groq, Gemini, Neon DB."
+        else:
+            sys_prompt = "És o GOD Cerebro Core, orquestrador universal com 10 agentes e 29 tools. 2 tabs: CHAT faz tudo menos construir, AGENT BUILDER só constrói sites/apps/AI com Builder Agent HTML leve em /workspace. Responde de forma útil, técnica e directa PT-PT. Custo 0: Groq, Gemini, Neon DB."
+        
+        llm_resp = llm_client.chat(messages, system_prompt=sys_prompt)
         ollama_resp = llm_resp  # compat
         assistant_content = llm_resp.get("content", "")
 
