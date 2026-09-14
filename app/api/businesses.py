@@ -129,8 +129,12 @@ PLATFORMS = {
 }
 
 def ensure_businesses_table():
-    conn = get_conn()
-    cur = conn.cursor()
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+    except Exception as e:
+        print(f"[Businesses] get_conn falhou: {e}")
+        return
     # Tabela business_links — múltiplos links por negócio (EXPENSYVX: youtube, tiktok, insta, shopify, printify, gumroad)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS business_links (
