@@ -69,13 +69,25 @@ def r2_setup(req: CloudflareR2SetupRequest):
     try:
         import boto3
         from botocore.config import Config
+        import ssl
+        import sys
+        # Try to get OpenSSL version for debugging
+        openssl_version = ssl.OPENSSL_VERSION
+        python_version = sys.version
+        
+        # Try with virtual addressing and TLS fix
         s3 = boto3.client(
             's3',
             endpoint_url=f"https://{account_id}.r2.cloudflarestorage.com",
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name='auto',
-            config=Config(signature_version='s3v4')
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'},
+                connect_timeout=15,
+                read_timeout=15
+            )
         )
         # Try list buckets
         buckets = []
@@ -119,7 +131,9 @@ def r2_setup(req: CloudflareR2SetupRequest):
             "upload_result": upload_result,
             "endpoint": f"https://{account_id}.r2.cloudflarestorage.com",
             "public_url": f"https://{bucket}.{account_id}.r2.dev/r2_test.html ou https://pub-{account_id}.r2.dev/r2_test.html",
-            "message": f"R2 {bucket} setup — se OK, adiciona env vars em Render: R2_ACCOUNT_ID={account_id} R2_ACCESS_KEY_ID=xxx R2_SECRET_ACCESS_KEY=xxx R2_BUCKET={bucket}"
+            "openssl_version": openssl_version,
+            "python_version": python_version,
+            "message": f"R2 {bucket} setup — se OK, adiciona env vars em Render: R2_ACCOUNT_ID={account_id} R2_ACCESS_KEY_ID=xxx R2_SECRET_ACCESS_KEY=xxx R2_BUCKET={bucket} — Se SSL fail, cria bucket manualmente em https://dash.cloudflare.com/r2"
         }
     except Exception as e:
         return {"ok": False, "error": str(e), "account_id": account_id[:10] + "..." if account_id else None}
