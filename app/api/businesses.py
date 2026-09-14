@@ -107,9 +107,68 @@ def get_kpis_for_sector(sector: str) -> Dict[str, Any]:
     return KPIS_BY_SECTOR["default"]
 
 def get_conn():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+    import os
+    db_url = os.getenv('DATABASE_URL')
+    if db_url and db_url.startswith(('postgres://', 'postgresql://')):
+        # Use Postgres via psycopg2 for zero-cost Neon/Supabase persistence
+        import psycopg2
+        import psycopg2.extras
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
+        return conn
+    # Fallback SQLite (ephemeral on Render free without disk)
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        return conn
+    except Exception as e:
+        print(f"[Businesses] get_conn erro: {e} — tenta apagar DB")
+        try:
+            if DB_PATH.exists():
+                DB_PATH.unlink()
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(DB_PATH))
+            conn.row_factory = sqlite3.Row
+            return conn
+        except Exception as e2:
+            print(f"[Businesses] Falha ao recriar DB: {e2}")
+            raise
+
+def _is_postgres():
+    import os
+    db_url = os.getenv('DATABASE_URL')
+    return db_url and db_url.startswith(('postgres://', 'postgresql://'))
+
+
+def _execute(cur, query, params=None):
+    import os
+    db_url = os.getenv('DATABASE_URL')
+    is_pg = db_url and db_url.startswith(('postgres://', 'postgresql://'))
+    if is_pg:
+        # Convert ? to %s for Postgres
+        query = query.replace('?', '%s')
+    if params is None:
+        return _execute(cur, query)
+    return _execute(cur, query, params)
+
+
+def _row_to_dict(row, cur=None):
+    # For SQLite Row or Postgres tuple
+    if isinstance(row, dict):
+        return row
+    if hasattr(row, 'keys'):
+        try:
+            return dict(row)
+        except:
+            pass
+    # For psycopg2, use cursor description
+    if cur and hasattr(cur, 'description'):
+        cols = [desc[0] for desc in cur.description]
+        return dict(zip(cols, row))
+    return dict(row) if row else None
+
 
 # Plataformas suportadas para múltiplos links — EXPENSYVX exemplo
 PLATFORMS = {
@@ -129,6 +188,9 @@ PLATFORMS = {
 }
 
 def ensure_businesses_table():
+    import os
+    db_url = os.getenv('DATABASE_URL')
+    is_postgres = db_url and db_url.startswith(('postgres://', 'postgresql://'))
     try:
         conn = get_conn()
         cur = conn.cursor()
@@ -136,7 +198,7 @@ def ensure_businesses_table():
         print(f"[Businesses] get_conn falhou: {e}")
         return
     # Tabela business_links — múltiplos links por negócio (EXPENSYVX: youtube, tiktok, insta, shopify, printify, gumroad)
-    cur.execute("""
+    _execute(cur, """
     CREATE TABLE IF NOT EXISTS business_links (
         id TEXT PRIMARY KEY,
         business_id TEXT NOT NULL,
@@ -149,7 +211,7 @@ def ensure_businesses_table():
         FOREIGN KEY(business_id) REFERENCES businesses(id) ON DELETE CASCADE
     )
     """)
-    cur.execute("""
+    _execute(cur, """
     CREATE TABLE IF NOT EXISTS businesses (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -175,25 +237,25 @@ def ensure_businesses_table():
     """)
     # Add columns if not exists (migration)
     try:
-        cur.execute("SELECT kpis_config FROM businesses LIMIT 1")
+        _execute(cur, "SELECT kpis_config FROM businesses LIMIT 1")
     except:
         try:
-            cur.execute("ALTER TABLE businesses ADD COLUMN kpis_config TEXT")
+            _execute(cur, "ALTER TABLE businesses ADD COLUMN kpis_config TEXT")
         except:
             pass
     try:
-        cur.execute("SELECT custom_kpis FROM businesses LIMIT 1")
+        _execute(cur, "SELECT custom_kpis FROM businesses LIMIT 1")
     except:
         try:
-            cur.execute("ALTER TABLE businesses ADD COLUMN custom_kpis TEXT")
+            _execute(cur, "ALTER TABLE businesses ADD COLUMN custom_kpis TEXT")
         except:
             pass
     # Add column business_id to missions if not exists (for linking)
     try:
-        cur.execute("SELECT business_id FROM missions LIMIT 1")
+        _execute(cur, "SELECT business_id FROM missions LIMIT 1")
     except:
         try:
-            cur.execute("ALTER TABLE missions ADD COLUMN business_id TEXT REFERENCES businesses(id)")
+            _execute(cur, "ALTER TABLE missions ADD COLUMN business_id TEXT REFERENCES businesses(id)")
         except:
             pass
     conn.commit()
@@ -246,7 +308,7 @@ def get_business_links(business_id: str) -> List[Dict[str, Any]]:
     try:
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM business_links WHERE business_id=? ORDER BY is_primary DESC, platform ASC", (business_id,))
+        _execute(cur, "SELECT * FROM business_links WHERE business_id=? ORDER BY is_primary DESC, platform ASC", (business_id,))
         links = [dict(r) for r in cur.fetchall()]
         conn.close()
         # Enriquece com config da plataforma
@@ -347,7 +409,7 @@ def list_businesses():
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM businesses ORDER BY updated_at DESC")
+    _execute(cur, "SELECT * FROM businesses ORDER BY updated_at DESC")
     rows = cur.fetchall()
     businesses = [row_to_dict(r) for r in rows]
     
@@ -395,12 +457,12 @@ def create_business(data: BusinessCreate):
         suggested = get_kpis_for_sector(data.sector)
         kpis_config = json.dumps(suggested)
     
-    cur.execute("""
+    _execute(cur, """
         INSERT INTO businesses (id, name, sector, description, status, business_model, value_proposition, customer_segment, channel, revenue_monthly, costs_monthly, currency, website_url, tags, notes, kpis_config, custom_kpis, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (bid, data.name, data.sector, data.description, data.status, data.business_model, data.value_proposition, data.customer_segment, data.channel, data.revenue_monthly, data.costs_monthly, data.currency, data.website_url, data.tags, data.notes, kpis_config, data.custom_kpis, now, now))
     conn.commit()
-    cur.execute("SELECT * FROM businesses WHERE id=?", (bid,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (bid,))
     row = cur.fetchone()
     conn.close()
     
@@ -417,7 +479,7 @@ def get_business(business_id: str):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (business_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -426,12 +488,12 @@ def get_business(business_id: str):
     business = row_to_dict(row)
     
     # Missões ligadas a este negócio
-    cur.execute("SELECT id, objective, status, created_at FROM missions WHERE business_id=? ORDER BY created_at DESC LIMIT 20", (business_id,))
+    _execute(cur, "SELECT id, objective, status, created_at FROM missions WHERE business_id=? ORDER BY created_at DESC LIMIT 20", (business_id,))
     missions = [dict(r) for r in cur.fetchall()]
     
     # Também procura por nome no objective
     if not missions and business.get('name'):
-        cur.execute("SELECT id, objective, status, created_at FROM missions WHERE objective LIKE ? ORDER BY created_at DESC LIMIT 10", (f"%{business['name']}%",))
+        _execute(cur, "SELECT id, objective, status, created_at FROM missions WHERE objective LIKE ? ORDER BY created_at DESC LIMIT 10", (f"%{business['name']}%",))
         missions = [dict(r) for r in cur.fetchall()]
     
     conn.close()
@@ -442,7 +504,7 @@ def update_business(business_id: str, data: BusinessUpdate):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (business_id,))
     if not cur.fetchone():
         conn.close()
         return {"error": "Negócio não encontrado"}
@@ -464,10 +526,10 @@ def update_business(business_id: str, data: BusinessUpdate):
         fields.append("updated_at=?")
         values.append(datetime.utcnow().isoformat())
         values.append(business_id)
-        cur.execute(f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", values)
+        _execute(cur, f"UPDATE businesses SET {', '.join(fields)} WHERE id=?", values)
         conn.commit()
     
-    cur.execute("SELECT * FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (business_id,))
     row = cur.fetchone()
     conn.close()
     business = row_to_dict(row)
@@ -478,7 +540,7 @@ def delete_business(business_id: str):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("DELETE FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "DELETE FROM businesses WHERE id=?", (business_id,))
     conn.commit()
     conn.close()
     return {"status": "deleted", "id": business_id}
@@ -489,7 +551,7 @@ def business_dashboard(business_id: str):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (business_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -498,7 +560,7 @@ def business_dashboard(business_id: str):
     business = row_to_dict(row)
     
     # Missões
-    cur.execute("SELECT * FROM missions WHERE business_id=? ORDER BY created_at DESC LIMIT 20", (business_id,))
+    _execute(cur, "SELECT * FROM missions WHERE business_id=? ORDER BY created_at DESC LIMIT 20", (business_id,))
     missions_rows = cur.fetchall()
     missions = [dict(r) for r in missions_rows]
     
@@ -507,7 +569,7 @@ def business_dashboard(business_id: str):
     tasks = []
     if mission_ids:
         placeholders = ",".join("?" for _ in mission_ids)
-        cur.execute(f"SELECT * FROM tasks WHERE mission_id IN ({placeholders}) ORDER BY created_at DESC LIMIT 20", mission_ids)
+        _execute(cur, f"SELECT * FROM tasks WHERE mission_id IN ({placeholders}) ORDER BY created_at DESC LIMIT 20", mission_ids)
         tasks = [dict(r) for r in cur.fetchall()]
     
     # Workspace files que mencionam o negócio?
@@ -557,7 +619,7 @@ def list_business_links(business_id: str):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT id FROM businesses WHERE id=?", (business_id,))
     if not cur.fetchone():
         conn.close()
         return {"error": "Negócio não encontrado"}
@@ -571,7 +633,7 @@ def create_business_link(business_id: str, data: BusinessLinkCreate):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT id FROM businesses WHERE id=?", (business_id,))
     if not cur.fetchone():
         conn.close()
         return {"error": "Negócio não encontrado"}
@@ -584,17 +646,17 @@ def create_business_link(business_id: str, data: BusinessLinkCreate):
     
     link_id = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
-    cur.execute("""
+    _execute(cur, """
         INSERT INTO business_links (id, business_id, platform, url, label, is_primary, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (link_id, business_id, data.platform, data.url, data.label, 1 if data.is_primary else 0, now))
     
     # Se é primary, remove primary dos outros
     if data.is_primary:
-        cur.execute("UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
+        _execute(cur, "UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
     
     conn.commit()
-    cur.execute("SELECT * FROM business_links WHERE id=?", (link_id,))
+    _execute(cur, "SELECT * FROM business_links WHERE id=?", (link_id,))
     row = cur.fetchone()
     conn.close()
     
@@ -609,7 +671,7 @@ def create_business_link(business_id: str, data: BusinessLinkCreate):
 def update_business_link(business_id: str, link_id: str, data: BusinessLinkUpdate):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
+    _execute(cur, "SELECT * FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
     if not cur.fetchone():
         conn.close()
         return {"error": "Link não encontrado"}
@@ -627,12 +689,12 @@ def update_business_link(business_id: str, link_id: str, data: BusinessLinkUpdat
     
     if fields:
         values.append(link_id)
-        cur.execute(f"UPDATE business_links SET {', '.join(fields)} WHERE id=?", values)
+        _execute(cur, f"UPDATE business_links SET {', '.join(fields)} WHERE id=?", values)
         if data.is_primary:
-            cur.execute("UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
+            _execute(cur, "UPDATE business_links SET is_primary=0 WHERE business_id=? AND id!=?", (business_id, link_id))
         conn.commit()
     
-    cur.execute("SELECT * FROM business_links WHERE id=?", (link_id,))
+    _execute(cur, "SELECT * FROM business_links WHERE id=?", (link_id,))
     row = cur.fetchone()
     conn.close()
     return {"link": dict(row) if row else {}, "status": "updated"}
@@ -641,7 +703,7 @@ def update_business_link(business_id: str, link_id: str, data: BusinessLinkUpdat
 def delete_business_link(business_id: str, link_id: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("DELETE FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
+    _execute(cur, "DELETE FROM business_links WHERE id=? AND business_id=?", (link_id, business_id))
     conn.commit()
     conn.close()
     return {"status": "deleted", "link_id": link_id, "business_id": business_id}
@@ -652,7 +714,7 @@ def bulk_create_links(business_id: str, links: List[BusinessLinkCreate]):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT id FROM businesses WHERE id=?", (business_id,))
     if not cur.fetchone():
         conn.close()
         return {"error": "Negócio não encontrado"}
@@ -661,7 +723,7 @@ def bulk_create_links(business_id: str, links: List[BusinessLinkCreate]):
     for data in links:
         link_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
-        cur.execute("""
+        _execute(cur, """
             INSERT INTO business_links (id, business_id, platform, url, label, is_primary, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (link_id, business_id, data.platform, data.url, data.label, 1 if data.is_primary else 0, now))
@@ -677,7 +739,7 @@ def update_business_kpis(business_id: str, kpis: Dict[str, Any]):
     ensure_businesses_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT custom_kpis FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT custom_kpis FROM businesses WHERE id=?", (business_id,))
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -693,9 +755,9 @@ def update_business_kpis(business_id: str, kpis: Dict[str, Any]):
     
     existing.update(kpis)
     
-    cur.execute("UPDATE businesses SET custom_kpis=?, updated_at=? WHERE id=?", (json.dumps(existing), datetime.utcnow().isoformat(), business_id))
+    _execute(cur, "UPDATE businesses SET custom_kpis=?, updated_at=? WHERE id=?", (json.dumps(existing), datetime.utcnow().isoformat(), business_id))
     conn.commit()
-    cur.execute("SELECT * FROM businesses WHERE id=?", (business_id,))
+    _execute(cur, "SELECT * FROM businesses WHERE id=?", (business_id,))
     updated = cur.fetchone()
     conn.close()
     
