@@ -1,11 +1,12 @@
 """
-Workspace API — ranking após sessão fechada, deploy se tiver info
+Workspace API — ranking após sessão fechada, deploy se tiver info + persistência Supabase/R2/GitHub
 """
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 from app.tools.workspace_ranking import workspace_ranking, workspace_cleanup
 from app.tools.deploy import site_deploy, session_close, _get_available_platforms
+from app.tools.persistent_storage import workspace_persist, workspace_persist_status
 
 router = APIRouter()
 
@@ -17,6 +18,10 @@ class DeployRequest(BaseModel):
 class SessionCloseRequest(BaseModel):
     session_id: Optional[str] = None
     auto_cleanup: bool = False
+
+class PersistRequest(BaseModel):
+    filename: Optional[str] = None
+    all: bool = False
 
 @router.get("/workspace/ranking")
 def get_ranking():
@@ -51,6 +56,22 @@ def get_deploy_platforms():
 def deploy_site(req: DeployRequest):
     """Faz deploy do site se tiver info"""
     result = site_deploy(filename=req.filename, platform=req.platform, message=req.message)
+    return result
+
+@router.get("/workspace/persist/status")
+def persist_status():
+    """Status persistência — Supabase 1GB free + R2 10GB free + GitHub Pages"""
+    return workspace_persist_status()
+
+@router.post("/workspace/persist")
+def persist_workspace(req: PersistRequest):
+    """Persiste workspace em Supabase 1GB free ou R2 10GB free ou GitHub Pages gh-pages"""
+    result = workspace_persist(filename=req.filename, all=req.all)
+    return result
+
+@router.get("/workspace/persist")
+def persist_workspace_get(filename: Optional[str] = None, all: bool = False):
+    result = workspace_persist(filename=filename, all=all)
     return result
 
 @router.post("/session/close")

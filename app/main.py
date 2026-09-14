@@ -38,6 +38,7 @@ import app.tools.workspace_ranking
 import app.tools.deploy
 import app.tools.news
 import app.tools.market_data
+import app.tools.persistent_storage
 
 if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
     try:
@@ -105,13 +106,30 @@ try:
 except Exception as e:
     print(f"[Main] Rate limit setup fail: {e}")
 
+# CORS seguro + Auth + Path traversal — tarefa 5
+try:
+    from app.security.auth import get_cors_origins, auth_and_security_middleware
+    cors_origins = get_cors_origins()
+    print(f"[Main] CORS origins: {cors_origins[:3]}... ({len(cors_origins)} total) — seguro, não * se API_KEY setada")
+except Exception as e:
+    print(f"[Main] CORS secure import fail: {e} — fallback *")
+    cors_origins = settings.get_cors_origins_list()
+    auth_and_security_middleware = None
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins_list(),
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Auth + Path traversal middleware (se disponível)
+if auth_and_security_middleware:
+    @app.middleware("http")
+    async def security_middleware(request, call_next):
+        return await auth_and_security_middleware(request, call_next)
+    print("[Main] Auth API_KEY + Path traversal middleware OK — tarefa 5")
 
 app.include_router(system.router, tags=["system"])
 app.include_router(chat.router, prefix="", tags=["chat"])

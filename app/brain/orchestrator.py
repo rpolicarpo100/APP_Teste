@@ -1,14 +1,14 @@
 """
 Orchestrator — O verdadeiro cérebro operacional
-Local AI Brain §6 + GOD §5
+Local AI Brain §6 + GOD §5 — Agora com Neon Postgres persistência total
 
 Ciclo: PLAN → EXECUTE → OBSERVE → VALIDATE → MEMORY → RESULT
+Migração SQLite efêmero → Neon Postgres free 0.5GB permanente (tarefa 3)
 """
 from typing import Dict, Any, List, Optional
 import uuid
 from datetime import datetime
 import json
-import sqlite3
 from pathlib import Path
 
 from app.brain.state import MissionState, TaskState, can_transition_mission, can_transition_task
@@ -18,6 +18,7 @@ from app.security.audit import audit_manager, AuditLog, EventType
 from app.memory.manager import memory_manager
 from app.memory.episodic import add_experience
 from app.config.settings import ROOT_DIR, settings
+from app.database.unified import get_conn, execute, fetchone, fetchall, init_tables, is_postgres
 
 class Orchestrator:
     def __init__(self, agent_registry, executor):
@@ -26,105 +27,32 @@ class Orchestrator:
         self.db_path = ROOT_DIR / "data" / "brain.db"
 
     def _get_conn(self):
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        # Cria tabelas se não existirem (Render ephemeral fix) — schema completo de app/database/schema.sql
-        conn.execute('''CREATE TABLE IF NOT EXISTS missions (
-            id TEXT PRIMARY KEY,
-            objective TEXT NOT NULL,
-            expected_result TEXT,
-            context TEXT,
-            constraints_text TEXT,
-            priority TEXT DEFAULT 'medium',
-            status TEXT DEFAULT 'PENDING',
-            autonomy_level INTEGER DEFAULT 2,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            completed_at TIMESTAMP
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
-            id TEXT PRIMARY KEY,
-            mission_id TEXT REFERENCES missions(id),
-            objective TEXT NOT NULL,
-            description TEXT,
-            agent_id TEXT,
-            required_skills TEXT,
-            dependencies TEXT,
-            priority TEXT DEFAULT 'medium',
-            acceptance_criteria TEXT,
-            risk TEXT DEFAULT 'low',
-            required_tools TEXT,
-            status TEXT DEFAULT 'PENDING',
-            attempts INTEGER DEFAULT 0,
-            max_attempts INTEGER DEFAULT 3,
-            result_summary TEXT,
-            artifacts TEXT,
-            evidence TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            started_at TIMESTAMP,
-            completed_at TIMESTAMP
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS conversations (
-            id TEXT PRIMARY KEY,
-            user_id TEXT REFERENCES users(id),
-            title TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS messages (
-            id TEXT PRIMARY KEY,
-            conversation_id TEXT REFERENCES conversations(id),
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
-        conn.execute('''CREATE TABLE IF NOT EXISTS memories (
-            id TEXT PRIMARY KEY,
-            type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            source TEXT,
-            confidence TEXT DEFAULT 'medium',
-            mission_id TEXT REFERENCES missions(id),
-            task_id TEXT REFERENCES tasks(id),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP
-        )''')
-        # Migração para tabelas antigas que não têm result_summary, evidence, attempts etc (Render ephemeral com schema antigo)
-        try:
-            cur = conn.execute("PRAGMA table_info(tasks)")
-            cols = [row[1] for row in cur.fetchall()]
-            if "result_summary" not in cols:
-                conn.execute("ALTER TABLE tasks ADD COLUMN result_summary TEXT")
-            if "evidence" not in cols:
-                conn.execute("ALTER TABLE tasks ADD COLUMN evidence TEXT")
-            if "attempts" not in cols:
-                conn.execute("ALTER TABLE tasks ADD COLUMN attempts INTEGER DEFAULT 0")
-            if "max_attempts" not in cols:
-                conn.execute("ALTER TABLE tasks ADD COLUMN max_attempts INTEGER DEFAULT 3")
-            if "started_at" not in cols:
-                conn.execute("ALTER TABLE tasks ADD COLUMN started_at TIMESTAMP")
-            if "completed_at" not in cols and "completed_at" not in [c for c in cols if c=="completed_at"]:
-                # tasks already has completed_at in old schema? check
+        conn = get_conn()
+        init_tables(conn)
+        # Migração SQLite antiga se necessário (só SQLite)
+        if not is_postgres():
+            try:
+                cur = conn.execute("PRAGMA table_info(tasks)")
+                cols = [row[1] for row in cur.fetchall()]
+                if "result_summary" not in cols:
+                    conn.execute("ALTER TABLE tasks ADD COLUMN result_summary TEXT")
+                if "evidence" not in cols:
+                    conn.execute("ALTER TABLE tasks ADD COLUMN evidence TEXT")
+                if "attempts" not in cols:
+                    conn.execute("ALTER TABLE tasks ADD COLUMN attempts INTEGER DEFAULT 0")
+                if "max_attempts" not in cols:
+                    conn.execute("ALTER TABLE tasks ADD COLUMN max_attempts INTEGER DEFAULT 3")
+                if "started_at" not in cols:
+                    conn.execute("ALTER TABLE tasks ADD COLUMN started_at TIMESTAMP")
+                cur2 = conn.execute("PRAGMA table_info(missions)")
+                mcols = [row[1] for row in cur2.fetchall()]
+                if "constraints_text" not in mcols:
+                    conn.execute("ALTER TABLE missions ADD COLUMN constraints_text TEXT")
+                if "completed_at" not in mcols:
+                    conn.execute("ALTER TABLE missions ADD COLUMN completed_at TIMESTAMP")
+                conn.commit()
+            except Exception:
                 pass
-            # missions missing columns
-            cur2 = conn.execute("PRAGMA table_info(missions)")
-            mcols = [row[1] for row in cur2.fetchall()]
-            if "constraints_text" not in mcols:
-                conn.execute("ALTER TABLE missions ADD COLUMN constraints_text TEXT")
-            if "completed_at" not in mcols:
-                conn.execute("ALTER TABLE missions ADD COLUMN completed_at TIMESTAMP")
-        except Exception as e:
-            # Se falhar migração, ignora — pode ser primeira criação
-            pass
-        conn.commit()
         return conn
 
     def create_mission(self, objective: str, expected_result: str = None, context: Dict[str, Any] = None, priority: str = "medium", autonomy_level: int = None) -> Dict[str, Any]:
@@ -134,19 +62,22 @@ class Orchestrator:
 
         conn = self._get_conn()
         try:
-            conn.execute("""
+            execute(conn, """
                 INSERT INTO missions (id, objective, expected_result, context, priority, status, autonomy_level, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (mission_id, objective, expected_result, context_json, priority, MissionState.PENDING.value, autonomy_level, datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
             conn.commit()
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
         audit_manager.log(AuditLog.create(
             event_type=EventType.MissionCreated,
             actor="orchestrator",
             mission_id=mission_id,
-            details={"objective": objective, "priority": priority}
+            details={"objective": objective, "priority": priority, "db": "neon" if is_postgres() else "sqlite"}
         ))
 
         memory_manager.add(f"Missao criada: {objective}", type="short", mission_id=mission_id, source="orchestrator")
@@ -164,30 +95,31 @@ class Orchestrator:
     def get_mission(self, mission_id: str) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         try:
-            cur = conn.execute("SELECT * FROM missions WHERE id=?", (mission_id,))
-            row = cur.fetchone()
+            cur = execute(conn, "SELECT * FROM missions WHERE id=?", (mission_id,))
+            row = fetchone(cur)
             if not row:
                 return None
             mission = dict(row)
-            # Parse context
             try:
                 mission["context"] = json.loads(mission["context"]) if mission["context"] else {}
             except:
                 mission["context"] = {}
-            # Get tasks
-            cur2 = conn.execute("SELECT * FROM tasks WHERE mission_id=? ORDER BY created_at", (mission_id,))
-            tasks = [dict(r) for r in cur2.fetchall()]
+            cur2 = execute(conn, "SELECT * FROM tasks WHERE mission_id=? ORDER BY created_at", (mission_id,))
+            tasks = fetchall(cur2)
             mission["tasks"] = tasks
             return mission
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def list_missions(self, limit: int = 20) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         try:
-            cur = conn.execute("SELECT * FROM missions ORDER BY created_at DESC LIMIT ?", (limit,))
+            cur = execute(conn, "SELECT * FROM missions ORDER BY created_at DESC LIMIT ?", (limit,))
             missions = []
-            for row in cur.fetchall():
+            for row in fetchall(cur):
                 m = dict(row)
                 try:
                     m["context"] = json.loads(m["context"]) if m["context"] else {}
@@ -196,19 +128,22 @@ class Orchestrator:
                 missions.append(m)
             return missions
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def _update_mission_status(self, mission_id: str, new_status: MissionState):
         conn = self._get_conn()
         try:
-            cur = conn.execute("SELECT status FROM missions WHERE id=?", (mission_id,))
-            row = cur.fetchone()
+            cur = execute(conn, "SELECT status FROM missions WHERE id=?", (mission_id,))
+            row = fetchone(cur)
             if not row:
                 raise ValueError(f"Missao {mission_id} nao encontrada")
             current = row["status"]
             if not can_transition_mission(current, new_status.value):
                 raise ValueError(f"Transicao invalida: {current} -> {new_status.value}")
-            conn.execute("UPDATE missions SET status=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), mission_id))
+            execute(conn, "UPDATE missions SET status=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), mission_id))
             conn.commit()
             audit_manager.log(AuditLog.create(
                 event_type=EventType.MissionStateChanged,
@@ -217,7 +152,10 @@ class Orchestrator:
                 details={"from": current, "to": new_status.value}
             ))
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def plan_mission(self, mission_id: str) -> Dict[str, Any]:
         mission = self.get_mission(mission_id)
@@ -226,14 +164,12 @@ class Orchestrator:
 
         self._update_mission_status(mission_id, MissionState.PLANNING)
 
-        # Usa planner
         plan = planner.plan(mission_id=mission_id, objective=mission["objective"], context=mission["context"])
 
-        # Persiste tasks
         conn = self._get_conn()
         try:
             for task in plan.tasks:
-                conn.execute("""
+                execute(conn, """
                     INSERT INTO tasks (id, mission_id, objective, description, agent_id, required_skills, dependencies, priority, acceptance_criteria, risk, required_tools, status, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -262,7 +198,10 @@ class Orchestrator:
                 ))
             conn.commit()
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
         self._update_mission_status(mission_id, MissionState.READY)
 
@@ -275,14 +214,12 @@ class Orchestrator:
     def _get_ready_tasks(self, mission_id: str) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         try:
-            # Tarefas PENDING ou READY cujas dependências estão SUCCEEDED
-            cur = conn.execute("SELECT * FROM tasks WHERE mission_id=? AND status IN ('PENDING','READY','RETRYING') ORDER BY created_at", (mission_id,))
-            all_tasks = [dict(r) for r in cur.fetchall()]
-            # Verifica dependências
+            cur = execute(conn, "SELECT * FROM tasks WHERE mission_id=? AND status IN ('PENDING','READY','RETRYING') ORDER BY created_at", (mission_id,))
+            all_tasks = fetchall(cur)
             ready = []
             task_status_map = {}
-            cur2 = conn.execute("SELECT id, status FROM tasks WHERE mission_id=?", (mission_id,))
-            for r in cur2.fetchall():
+            cur2 = execute(conn, "SELECT id, status FROM tasks WHERE mission_id=?", (mission_id,))
+            for r in fetchall(cur2):
                 task_status_map[r["id"]] = r["status"]
 
             for task in all_tasks:
@@ -293,33 +230,34 @@ class Orchestrator:
                 if not deps:
                     ready.append(task)
                 else:
-                    # Todas as deps devem estar SUCCEEDED
                     if all(task_status_map.get(d) == TaskState.SUCCEEDED.value for d in deps):
                         ready.append(task)
             return ready
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def _update_task_status(self, task_id: str, new_status: TaskState, result_summary: str = None, artifacts: str = None, evidence: str = None):
         conn = self._get_conn()
         try:
-            cur = conn.execute("SELECT status FROM tasks WHERE id=?", (task_id,))
-            row = cur.fetchone()
+            cur = execute(conn, "SELECT status FROM tasks WHERE id=?", (task_id,))
+            row = fetchone(cur)
             if not row:
                 raise ValueError(f"Task {task_id} nao encontrada")
             current = row["status"]
             if not can_transition_task(current, new_status.value):
-                # Permite forçar se for de PENDING para READY (primeira transição)
                 if not (current == "PENDING" and new_status.value == "READY"):
                     raise ValueError(f"Transicao tarefa invalida: {current} -> {new_status.value}")
 
             if new_status == TaskState.RUNNING:
-                conn.execute("UPDATE tasks SET status=?, started_at=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), task_id))
+                execute(conn, "UPDATE tasks SET status=?, started_at=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), task_id))
             elif new_status in [TaskState.SUCCEEDED, TaskState.FAILED, TaskState.BLOCKED, TaskState.CANCELLED]:
-                conn.execute("UPDATE tasks SET status=?, completed_at=?, updated_at=?, result_summary=?, artifacts=?, evidence=? WHERE id=?",
+                execute(conn, "UPDATE tasks SET status=?, completed_at=?, updated_at=?, result_summary=?, artifacts=?, evidence=? WHERE id=?",
                              (new_status.value, datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), result_summary, artifacts, evidence, task_id))
             else:
-                conn.execute("UPDATE tasks SET status=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), task_id))
+                execute(conn, "UPDATE tasks SET status=?, updated_at=? WHERE id=?", (new_status.value, datetime.utcnow().isoformat(), task_id))
             conn.commit()
 
             audit_manager.log(AuditLog.create(
@@ -329,7 +267,10 @@ class Orchestrator:
                 details={"from": current, "to": new_status.value}
             ))
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
     def run_mission(self, mission_id: str) -> Dict[str, Any]:
         mission = self.get_mission(mission_id)
@@ -338,13 +279,11 @@ class Orchestrator:
 
         if mission["status"] not in [MissionState.READY.value, MissionState.RUNNING.value, MissionState.NEEDS_REVIEW.value]:
             if mission["status"] == MissionState.PENDING.value:
-                # Auto-plan
                 self.plan_mission(mission_id)
                 mission = self.get_mission(mission_id)
 
         self._update_mission_status(mission_id, MissionState.RUNNING)
 
-        # Loop de execução — conforme spec §20 MAX_AGENT_STEPS
         max_steps = settings.max_agent_steps
         steps = 0
         results = []
@@ -352,30 +291,29 @@ class Orchestrator:
         while steps < max_steps:
             ready_tasks = self._get_ready_tasks(mission_id)
             if not ready_tasks:
-                # Verifica se há tarefas bloqueadas ou pendentes
                 conn = self._get_conn()
                 try:
-                    cur = conn.execute("SELECT COUNT(*) as c FROM tasks WHERE mission_id=? AND status IN ('PENDING','READY','RUNNING','RETRYING')", (mission_id,))
-                    remaining = cur.fetchone()["c"]
+                    cur = execute(conn, "SELECT COUNT(*) as c FROM tasks WHERE mission_id=? AND status IN ('PENDING','READY','RUNNING','RETRYING')", (mission_id,))
+                    row = fetchone(cur)
+                    remaining = row["c"] if isinstance(row, dict) else row[0] if row else 0
                     if remaining == 0:
-                        break  # todas concluídas
+                        break
                 finally:
-                    conn.close()
-                # Se não há ready mas há remaining, significa deadlock de dependências ou bloqueadas
+                    try:
+                        conn.close()
+                    except:
+                        pass
                 break
 
-            # Executa tarefas prontas — para MVP, sequencial; futuro paralelo
             for task in ready_tasks:
                 if steps >= max_steps:
                     break
 
-                # Transição para READY se PENDING
                 if task["status"] == TaskState.PENDING.value:
                     self._update_task_status(task["id"], TaskState.READY)
 
                 self._update_task_status(task["id"], TaskState.RUNNING)
 
-                # Prepara definição para executor
                 try:
                     task_def = {
                         "id": task["id"],
@@ -388,15 +326,13 @@ class Orchestrator:
                         "acceptance_criteria": json.loads(task["acceptance_criteria"]) if task["acceptance_criteria"] else [],
                         "required_tools": json.loads(task["required_tools"]) if task["required_tools"] else [],
                     }
-                except Exception as e:
+                except Exception:
                     task_def = {"id": task["id"], "mission_id": mission_id, "objective": task["objective"], "agent_id": task["agent_id"], "required_tools": []}
 
                 exec_result = self.executor.execute_task(task_def, mission_context=mission["context"])
 
-                # Valida resultado
                 if exec_result.output:
                     validation = validator.validate(exec_result.output, task_def)
-                    # Se inválido, marca como NEEDS_REVIEW
                     if validation.result.value == "INVALID":
                         self._update_task_status(
                             task["id"],
@@ -422,7 +358,6 @@ class Orchestrator:
                             artifacts=json.dumps(exec_result.output.get("artifacts", []), ensure_ascii=False),
                             evidence=json.dumps(exec_result.output.get("evidence", []), ensure_ascii=False)
                         )
-                        # Memória episódica
                         add_experience(
                             task=task["objective"],
                             agent=task["agent_id"],
@@ -438,7 +373,6 @@ class Orchestrator:
                             source=task["agent_id"]
                         )
                 else:
-                    # Sem output — falha ou bloqueada
                     if exec_result.status == TaskState.BLOCKED and exec_result.approval_required:
                         self._update_task_status(task["id"], TaskState.BLOCKED, result_summary=exec_result.error)
                     else:
@@ -453,15 +387,21 @@ class Orchestrator:
 
                 steps += 1
 
-            # Re-avalia ready tasks após cada ronda
-
-        # Após loop, verifica estado final da missão
         conn = self._get_conn()
         try:
-            cur = conn.execute("SELECT status, COUNT(*) as c FROM tasks WHERE mission_id=? GROUP BY status", (mission_id,))
-            status_counts = {row["status"]: row["c"] for row in cur.fetchall()}
+            cur = execute(conn, "SELECT status, COUNT(*) as c FROM tasks WHERE mission_id=? GROUP BY status", (mission_id,))
+            rows = fetchall(cur)
+            status_counts = {}
+            for row in rows:
+                if isinstance(row, dict):
+                    status_counts[row["status"]] = row["c"]
+                else:
+                    status_counts[row[0]] = row[1]
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass
 
         failed = status_counts.get(TaskState.FAILED.value, 0)
         blocked = status_counts.get(TaskState.BLOCKED.value, 0)
@@ -474,10 +414,8 @@ class Orchestrator:
             self._update_mission_status(mission_id, MissionState.BLOCKED)
         elif succeeded == total and total > 0:
             self._update_mission_status(mission_id, MissionState.VALIDATING)
-            # Validação final da missão
             self._update_mission_status(mission_id, MissionState.COMPLETED)
         else:
-            # Parcial
             if blocked > 0 or failed > 0:
                 self._update_mission_status(mission_id, MissionState.NEEDS_REVIEW)
             else:
@@ -489,7 +427,7 @@ class Orchestrator:
             event_type=EventType.TaskCompleted,
             actor="orchestrator",
             mission_id=mission_id,
-            details={"steps": steps, "results": results, "status_counts": status_counts}
+            details={"steps": steps, "results": results, "status_counts": status_counts, "db": "neon" if is_postgres() else "sqlite"}
         ))
 
         return {

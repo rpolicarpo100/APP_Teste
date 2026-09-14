@@ -323,6 +323,14 @@ def site_builder(objective: str, style: str = "moderno minimalista", brand: str 
         # URL para preview — via /workspace static mount
         url = f"/workspace/{filename}"
 
+        # Persistência total — tenta Supabase 1GB free / R2 10GB free / GitHub Pages
+        persist_info = None
+        try:
+            from app.tools.persistent_storage import workspace_persist
+            persist_info = workspace_persist(filename=filename)
+        except Exception as e:
+            persist_info = {"persisted": False, "error": str(e)}
+
         # Builder tem workspace limitado, mas é capaz de fazer deploy se tiver a info
         deploy_info = None
         try:
@@ -346,6 +354,12 @@ def site_builder(objective: str, style: str = "moderno minimalista", brand: str 
             "built": True,
             "message": f"Site construído: {filename} — {len(html)} bytes — leve e bonito"
         }
+
+        if persist_info:
+            result["persist"] = persist_info
+            if persist_info.get("persisted"):
+                result["message"] += f" — Persistido em {persist_info.get('platform')}: {persist_info.get('results', [{}])[0].get('url', '')}"
+                result["persisted_url"] = persist_info.get('results', [{}])[0].get('url') if persist_info.get('results') else None
         
         if deploy_info:
             result["deploy"] = deploy_info

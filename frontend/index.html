@@ -363,6 +363,82 @@
     .topbar{padding:0 16px}
     .tabs .tab{padding:8px 12px;font-size:12px}
   }
+  /* CHAT | AGENT tabs + spinner + localStorage history */
+  .chat-agent-tabs{
+    display:flex;
+    background:var(--bg2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:4px;
+    gap:2px;
+    width:fit-content;
+    margin:0 auto 16px;
+  }
+  .chat-agent-tab{
+    padding:8px 18px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:800;
+    cursor:pointer;
+    color:var(--text2);
+    transition:all .2s;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .chat-agent-tab.active{
+    background:var(--accentDark);
+    color:white;
+    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  }
+  .chat-agent-tab:hover{color:var(--text)}
+  .spinner{
+    width:18px;height:18px;
+    border:2px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+    display:inline-block;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .building-steps{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+    margin-top:10px;
+    font-size:11px;
+    line-height:1.6;
+  }
+  .building-steps .step{
+    display:flex;align-items:center;gap:8px;
+    padding:4px 0;
+    opacity:0.5;
+    transition:all .3s;
+  }
+  .building-steps .step.active{opacity:1;font-weight:700;color:var(--accent)}
+  .building-steps .step.done{opacity:1;color:var(--green)}
+  .building-steps .step-dot{
+    width:20px;height:20px;border-radius:50%;
+    background:var(--bg2);border:1px solid var(--border);
+    display:grid;place-items:center;font-size:10px;
+  }
+  .building-steps .step.active .step-dot{background:var(--accentSoft);border-color:var(--accent);color:var(--accent)}
+  .building-steps .step.done .step-dot{background:var(--greenSoft);border-color:var(--green);color:var(--green)}
+  .chat-history-panel{
+    max-width:760px;margin:0 auto 12px;
+    background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:10px;
+    display:flex;gap:6px;overflow-x:auto;
+  }
+  .history-chip{
+    padding:6px 10px;background:var(--bg2);border:1px solid var(--border);
+    border-radius:999px;font-size:10px;font-weight:600;
+    white-space:nowrap;cursor:pointer;flex-shrink:0;
+  }
+  .history-chip:hover{border-color:var(--accent);color:var(--accent)}
+  .history-chip.active{background:var(--accentDark);color:white;border-color:var(--accentDark)}
+
   @media(max-width:600px){
     .topbar{height:auto;padding:12px 16px;flex-direction:column;gap:10px;align-items:stretch}
     .tabs{overflow-x:auto}
@@ -483,26 +559,49 @@
       </div>
     </div>
 
-    <!-- CHAT -->
+    <!-- CHAT | AGENT — 2 tabs: CHAT faz tudo menos construir, AGENT só constrói -->
     <div id="page-chat" class="page hidden">
       <div class="chat-wrap">
+        <!-- CHAT | AGENT toggle -->
+        <div class="chat-agent-tabs">
+          <div class="chat-agent-tab active" data-mode="chat" onclick="switchChatMode('chat')"><span>💬</span> CHAT</div>
+          <div class="chat-agent-tab" data-mode="agent" onclick="switchChatMode('agent')"><span>✦</span> AGENT BUILDER</div>
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--text3);margin-bottom:12px" id="chat-mode-hint">CHAT faz tudo mas não constrói — AGENT só constrói sites/apps/AI</div>
+        
+        <!-- Histórico localStorage -->
+        <div class="chat-history-panel" id="chat-history-panel" style="display:none">
+          <span style="font-size:10px;color:var(--text3);padding:6px 0;flex-shrink:0">Histórico:</span>
+          <div id="chat-history-chips" style="display:flex;gap:6px;overflow-x:auto"></div>
+          <button class="history-chip" style="margin-left:auto;background:var(--bg2)" onclick="clearChatHistory()">🗑️ Limpar</button>
+        </div>
+
         <div class="chat-area" id="chat-area">
           <div class="msg-row bot">
             <div class="msg-avatar bot">B</div>
             <div>
-              <div class="msg-bubble">Olá! Sou o teu Brain — leve, bonito e 100% local. 🧡<br><br>Estou em <b>DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES</b> como pediste.<br><br>Posso:<br>• <b>CHAT</b> — conversar e orquestrar<br>• <b>NEGÓCIOS</b> — calcular margens, analisar mercado, criar modelo de negócio<br>• <b>DASHBOARD</b> — ver tudo<br>• <b>DEFINIÇÕES</b> — configurar<br><br>O que vamos fazer?</div>
-              <div class="msg-meta">Brain • agora</div>
+              <div class="msg-bubble">Olá! Sou o teu Brain — leve, bonito e 100% local. 🧡<br><br>Estou em <b>DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES</b> como pediste.<br><br><b>CHAT | AGENT:</b><br>• <b>CHAT</b> — faz tudo mas <u>não constrói</u> (explica, pesquisa, analisa)<br>• <b>AGENT BUILDER</b> — só constrói sites/apps/AI com preview em /workspace<br><br>Escolhe a tab em cima. O que vamos fazer?</div>
+              <div class="msg-meta">Brain • agora • CHAT não constrói • AGENT só constrói</div>
               <div class="quick">
                 <div class="quick-btn" onclick="quick('Pesquisar ferramentas gratuitas de trading')">🔍 Pesquisar</div>
-                <div class="quick-btn" onclick="quick('Criar design para landing page')">🎨 Design</div>
+                <div class="quick-btn" onclick="switchChatMode('agent'); quick('Cria um site para o meu canal Deadly Gods Portugal gamer épico')">✦ AGENT: site Deadly Gods</div>
                 <div class="quick-btn" onclick="switchTab('negocios')">📊 Negócios</div>
               </div>
             </div>
           </div>
         </div>
-        <div class="chat-input">
-          <input id="chat-input" placeholder="Escreve aqui... ex: Analisar negócio de loja online" />
+        <div class="chat-input" id="chat-input-wrap">
+          <input id="chat-input" placeholder="CHAT: Escreve aqui... ex: Analisar negócio de loja online" />
           <button class="send" id="send-btn">↗</button>
+        </div>
+        <!-- Loading spinner + building steps -->
+        <div id="chat-loading" class="hidden" style="max-width:760px;margin:12px auto 0;display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)">
+          <div class="spinner"></div>
+          <div style="flex:1">
+            <b style="font-size:12px" id="loading-text">A processar...</b><br>
+            <span style="font-size:10px;color:var(--text3)" id="loading-sub">Aguarda 2-11s — execução real</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3)" id="loading-timer">0s</div>
         </div>
       </div>
     </div>
@@ -1247,35 +1346,179 @@ async function quickMission(obj){
   }
 }
 
-// CHAT
+// CHAT | AGENT — 2 tabs + loading spinner + localStorage histórico
+let chatMode = 'chat'; // 'chat' ou 'agent'
+let chatHistory = [];
+try{
+  const saved = localStorage.getItem('brain_chat_history');
+  if(saved) chatHistory = JSON.parse(saved);
+}catch(e){}
+try{
+  const savedMode = localStorage.getItem('brain_chat_mode');
+  if(savedMode) chatMode = savedMode;
+}catch(e){}
+
+function switchChatMode(mode){
+  chatMode = mode;
+  document.querySelectorAll('.chat-agent-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.mode===mode);
+  });
+  const hint = $('chat-mode-hint');
+  const input = $('chat-input');
+  if(mode==='chat'){
+    if(hint) hint.textContent = 'CHAT faz tudo mas não constrói — explica, pesquisa, analisa, orquestra';
+    if(input) input.placeholder = 'CHAT: Escreve aqui... ex: Analisar negócio de loja online';
+  } else {
+    if(hint) hint.textContent = 'AGENT BUILDER só constrói — sites, apps, AI, landing pages com preview /workspace + persistência Neon/Supabase/R2/GitHub Pages';
+    if(input) input.placeholder = 'AGENT: Cria um site para o meu canal Deadly Gods Portugal gamer épico';
+  }
+  try{ localStorage.setItem('brain_chat_mode', mode); }catch(e){}
+  renderChatHistory();
+}
+
+function saveChatHistory(msg){
+  chatHistory.unshift({text: msg.slice(0,80), full: msg, time: Date.now(), mode: chatMode});
+  chatHistory = chatHistory.slice(0,20); // max 20
+  try{ localStorage.setItem('brain_chat_history', JSON.stringify(chatHistory)); }catch(e){}
+  renderChatHistory();
+}
+
+function renderChatHistory(){
+  const panel = $('chat-history-panel');
+  const chips = $('chat-history-chips');
+  if(!panel || !chips) return;
+  if(chatHistory.length===0){
+    panel.style.display='none';
+    return;
+  }
+  panel.style.display='flex';
+  chips.innerHTML = chatHistory.map((h,i)=>`
+    <div class="history-chip ${h.mode==='agent'?'':''}" onclick="useHistory(${i})" title="${h.full.slice(0,120)}">
+      ${h.mode==='agent'?'✦':'💬'} ${h.text.slice(0,30)}${h.text.length>30?'...':''}
+    </div>
+  `).join('');
+}
+
+function useHistory(idx){
+  const h = chatHistory[idx];
+  if(!h) return;
+  if(h.mode) switchChatMode(h.mode);
+  $('chat-input').value = h.full;
+  $('chat-input').focus();
+}
+
+function clearChatHistory(){
+  if(!confirm('Limpar histórico local?')) return;
+  chatHistory = [];
+  try{ localStorage.removeItem('brain_chat_history'); }catch(e){}
+  renderChatHistory();
+}
+
 $('send-btn').addEventListener('click', sendChat);
 $('chat-input').addEventListener('keypress', e=>{if(e.key==='Enter') sendChat();});
-function quick(text){ $('chat-input').value=text; sendChat(); }
+function quick(text){ 
+  // Se texto contém site/app/youtube, muda para AGENT automaticamente
+  if(/site|app|youtube|canal|landing|portfolio|loja|ai|bot/i.test(text)){
+    switchChatMode('agent');
+  }
+  $('chat-input').value=text; 
+  sendChat(); 
+}
 
 async function sendChat(){
   const input = $('chat-input');
   const msg = input.value.trim();
   if(!msg) return;
   input.value='';
+  
+  // Guarda histórico
+  saveChatHistory(msg);
+  
   const area = $('chat-area');
-  area.innerHTML += `<div class="msg-row user"><div class="msg-avatar you">TU</div><div><div class="msg-bubble">${msg}</div><div class="msg-meta">Tu • agora</div></div></div>`;
+  area.innerHTML += `<div class="msg-row user"><div class="msg-avatar you">TU</div><div><div class="msg-bubble">${msg} <span style="font-size:9px;opacity:0.7">${chatMode==='agent'?'✦ AGENT':'💬 CHAT'}</span></div><div class="msg-meta">Tu • agora • ${chatMode.toUpperCase()}</div></div></div>`;
   area.scrollTop = area.scrollHeight;
 
-  // Mostra "a construir..." se for pedido de app/site
-  const isBuild = /criar app|cria app|criar site|cria site|landing page|website|portfolio|loja online/i.test(msg);
-  let buildingEl = null;
-  if(isBuild){
-    buildingEl = document.createElement('div');
-    buildingEl.className = 'msg-row bot';
-    buildingEl.innerHTML = `<div class="msg-avatar bot">B</div><div><div class="msg-bubble">🏗️ A construir <b>${msg.slice(0,60)}</b>...<br><br>→ A criar missão real<br>→ Builder Agent a gerar HTML leve e bonito<br>→ A guardar em data/workspace<br><br><span style="font-size:11px;color:var(--text2)">Isto demora 2-5s — execução real, não simulação</span></div></div>`;
-    area.appendChild(buildingEl);
-    area.scrollTop = area.scrollHeight;
+  // Loading spinner + timer
+  const loadingEl = $('chat-loading');
+  const loadingText = $('loading-text');
+  const loadingSub = $('loading-sub');
+  const loadingTimer = $('loading-timer');
+  let timerSec = 0;
+  let timerInterval = null;
+  
+  function showLoading(text, sub){
+    if(loadingEl){
+      loadingEl.classList.remove('hidden');
+      if(loadingText) loadingText.textContent = text;
+      if(loadingSub) loadingSub.textContent = sub;
+      timerSec = 0;
+      if(loadingTimer) loadingTimer.textContent = '0s';
+      timerInterval = setInterval(()=>{
+        timerSec++;
+        if(loadingTimer) loadingTimer.textContent = timerSec+'s';
+      }, 1000);
+    }
+    input.disabled = true;
+    $('send-btn').disabled = true;
+    $('send-btn').innerHTML = '<div class="spinner" style="width:14px;height:14px"></div>';
+  }
+  function hideLoading(){
+    if(loadingEl) loadingEl.classList.add('hidden');
+    if(timerInterval) clearInterval(timerInterval);
+    input.disabled = false;
+    $('send-btn').disabled = false;
+    $('send-btn').textContent = '↗';
+    input.focus();
   }
 
-  const data = await apiFetch('/chat', {method:'POST', body:JSON.stringify({message:msg, conversation_id:conversationId})});
+  // Mostra building steps se AGENT ou pedido de build
+  const isBuildIntent = /criar|cria|construir|fazer|quero|preciso|site|app|landing|website|portfolio|loja|youtube|canal|ai|bot/i.test(msg);
+  const willBuild = chatMode==='agent' || (chatMode==='chat' && isBuildIntent && false); // CHAT não constrói
+  
+  let buildingEl = null;
+  if(chatMode==='agent'){
+    showLoading('🏗️ AGENT BUILDER a construir...', 'Missão real → Builder Agent → HTML leve + preview /workspace + Neon Postgres');
+    buildingEl = document.createElement('div');
+    buildingEl.className = 'msg-row bot';
+    buildingEl.innerHTML = `<div class="msg-avatar bot">B</div><div><div class="msg-bubble">
+      🏗️ <b>AGENT BUILDER</b> a construir <b>${msg.slice(0,60)}</b>...<br>
+      <div class="building-steps">
+        <div class="step active" id="step1"><div class="step-dot">1</div> Criar missão real (Neon Postgres)</div>
+        <div class="step" id="step2"><div class="step-dot">2</div> Builder Agent a gerar HTML leve e bonito</div>
+        <div class="step" id="step3"><div class="step-dot">3</div> Guardar em data/workspace + persistência Supabase/R2/GitHub</div>
+        <div class="step" id="step4"><div class="step-dot">4</div> Preview + deploy se tiver token</div>
+      </div>
+      <span style="font-size:11px;color:var(--text2)">Isto demora 2-11s — execução real, não simulação — spinner + histórico localStorage</span>
+    </div></div>`;
+    area.appendChild(buildingEl);
+    area.scrollTop = area.scrollHeight;
+    
+    // Anima steps
+    setTimeout(()=>{ const s1=$('step1'); if(s1){ s1.classList.remove('active'); s1.classList.add('done'); s1.querySelector('.step-dot').textContent='✓'; } const s2=$('step2'); if(s2) s2.classList.add('active'); }, 800);
+    setTimeout(()=>{ const s2=$('step2'); if(s2){ s2.classList.remove('active'); s2.classList.add('done'); s2.querySelector('.step-dot').textContent='✓'; } const s3=$('step3'); if(s3) s3.classList.add('active'); }, 2500);
+    setTimeout(()=>{ const s3=$('step3'); if(s3){ s3.classList.remove('active'); s3.classList.add('done'); s3.querySelector('.step-dot').textContent='✓'; } const s4=$('step4'); if(s4) s4.classList.add('active'); }, 5000);
+  } else {
+    showLoading('💬 CHAT a processar...', 'Groq 14.4k/dia + Gemini 60/min + OpenRouter free + Neon Postgres');
+  }
+
+  // Context com mode
+  const context = {
+    mode: chatMode,
+    force_build: chatMode==='agent',
+    no_build: chatMode==='chat'
+  };
+
+  let data;
+  try{
+    data = await apiFetch('/chat', {method:'POST', body:JSON.stringify({message:msg, conversation_id:conversationId, context: context})});
+  }catch(e){
+    data = {error: e.message, message: 'Erro: '+e.message};
+  }
+  
   if(data.conversation_id) conversationId = data.conversation_id;
 
   if(buildingEl) buildingEl.remove();
+  hideLoading();
 
   const reply = (data.message || data.error || 'Sem resposta').replace(/\n/g,'<br>');
   let extraHtml = '';
@@ -1294,21 +1537,52 @@ async function sendChat(){
           <div style="background:white">
             <iframe src="${url}" style="width:100%;height:320px;border:none" loading="lazy"></iframe>
           </div>
-          <div style="padding:10px 14px;display:flex;gap:8px">
+          <div style="padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn" style="background:var(--accentDark);color:white;padding:8px 12px;font-size:11px" onclick="window.open('${url}','_blank')">👁️ Ver site</button>
             <button class="btn" style="background:var(--bg2);border:1px solid var(--border);padding:8px 12px;font-size:11px" onclick="navigator.clipboard.writeText(window.location.origin+'${url}');alert('Link copiado: '+window.location.origin+'${url}')">📋 Copiar link</button>
-            <span style="margin-left:auto;font-size:10px;color:var(--text3);align-self:center">${data.mission_id ? 'Missão '+data.mission_id.slice(0,8) : ''} • leve & bonito</span>
+            <button class="btn" style="background:var(--greenSoft);border:1px solid var(--green);color:var(--green);padding:8px 12px;font-size:11px" onclick="apiFetch('/workspace/persist', {method:'POST', body:JSON.stringify({filename:'${filename}'})}).then(r=>alert(JSON.stringify(r).slice(0,300)))">💾 Persistir (Supabase/R2/GitHub)</button>
+            <span style="margin-left:auto;font-size:10px;color:var(--text3);align-self:center">${data.mission_id ? 'Missão '+data.mission_id.slice(0,8) : ''} • leve & bonito • ${timerSec}s</span>
           </div>
         </div>
       `;
     }
   }
 
-  area.innerHTML += `<div class="msg-row bot"><div class="msg-avatar bot">B</div><div><div class="msg-bubble">${reply}${extraHtml}</div><div class="msg-meta">Brain • ${data.model||'local'} • ${data.ollama_available?'Ollama':'modo leve'}${data.mission_id ? ' • Missão '+data.mission_id.slice(0,8) : ''}</div></div></div>`;
+  area.innerHTML += `<div class="msg-row bot"><div class="msg-avatar bot">B</div><div><div class="msg-bubble">${reply}${extraHtml}</div><div class="msg-meta">Brain • ${data.model||'local'} • ${data.ollama_available?'Ollama':'modo leve'} • ${chatMode.toUpperCase()} ${data.mission_id ? ' • Missão '+data.mission_id.slice(0,8) : ''} • ${timerSec}s</div></div></div>`;
   area.scrollTop = area.scrollHeight;
   loadDashboard();
   if(data.built_url) loadBizMissoes();
+  
+  // Salva conversa completa no localStorage também
+  try{
+    const fullHistory = JSON.parse(localStorage.getItem('brain_full_chat')||'[]');
+    fullHistory.push({role:'user', content:msg, mode:chatMode, time:Date.now()});
+    fullHistory.push({role:'assistant', content:data.message||'', artifacts:data.artifacts||[], time:Date.now()});
+    localStorage.setItem('brain_full_chat', JSON.stringify(fullHistory.slice(-50)));
+  }catch(e){}
 }
+
+// Inicializa modo e histórico ao carregar
+setTimeout(()=>{
+  switchChatMode(chatMode);
+  renderChatHistory();
+  try{
+    const full = JSON.parse(localStorage.getItem('brain_full_chat')||'[]');
+    if(full.length>0){
+      const area=$('chat-area');
+      // Mostra últimas 3 trocas do histórico local
+      const last = full.slice(-6);
+      if(last.length>0 && area){
+        last.forEach(m=>{
+          if(m.role==='user'){
+            area.innerHTML += `<div class="msg-row user" style="opacity:0.7"><div class="msg-avatar you">TU</div><div><div class="msg-bubble">${m.content.slice(0,120)} <span style="font-size:9px;opacity:0.7">${m.mode||'chat'}</span></div><div class="msg-meta">Histórico local • ${new Date(m.time).toLocaleTimeString('pt-PT')}</div></div></div>`;
+          }
+        });
+        area.scrollTop = area.scrollHeight;
+      }
+    }
+  }catch(e){}
+}, 500);
 
 // NEGOCIOS — OS NOSSOS NEGÓCIOS — Portfolio real + gestão completa
 let businessesCache = [];
