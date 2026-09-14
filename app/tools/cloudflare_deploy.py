@@ -100,7 +100,7 @@ def cloudflare_test(token: str = None, account_id: str = None, gateway_id: str =
         try:
             with httpx.Client(timeout=20) as client:
                 resp = client.post(
-                    f"https://api.cloudflare.com/client/v4/accounts/{test_account_id}/ai/run/@cf/meta/llama-3-8b-instruct",
+                    f"https://api.cloudflare.com/client/v4/accounts/{test_account_id}/ai/run/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
                     headers={"Authorization": f"Bearer {test_token}", "Content-Type": "application/json"},
                     json={"messages": [{"role": "user", "content": "Hello, 1+1=?"}]}
                 )
@@ -117,7 +117,7 @@ def cloudflare_test(token: str = None, account_id: str = None, gateway_id: str =
         try:
             with httpx.Client(timeout=20) as client:
                 resp = client.post(
-                    f"https://gateway.ai.cloudflare.com/v1/{test_account_id}/{test_gateway_id}/workers-ai/@cf/meta/llama-3-8b-instruct",
+                    f"https://gateway.ai.cloudflare.com/v1/{test_account_id}/{test_gateway_id}/workers-ai/@cf/meta/llama-3.3-70b-instruct-fp8-fast",
                     headers={"Authorization": f"Bearer {test_token}", "cf-aig-authorization": f"Bearer {test_token}", "Content-Type": "application/json"},
                     json={"messages": [{"role": "user", "content": "Hello"}]}
                 )
@@ -294,7 +294,7 @@ def cloudflare_workers_deploy(filename: str = None) -> Dict[str, Any]:
 @register_tool(
     id="cloudflare.ai.chat",
     name="Cloudflare Workers AI Chat",
-    description="Chat com Cloudflare Workers AI free — @cf/meta/llama-3-8b-instruct etc — usa cfat_ token",
+    description="Chat com Cloudflare Workers AI free — @cf/meta/llama-3.3-70b-instruct-fp8-fast etc — usa cfat_ token",
     risk_level="LOW",
     requires_approval=False,
     input_schema={"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"]},
