@@ -1,0 +1,32 @@
+# Koyeb free nano instance — https://koyeb.com/docs/quickstart/deploy-a-fastapi-app
+# Deploy: https://app.koyeb.com/apps/new
+name: ai-brain-god
+services:
+  - name: api
+    type: web
+    git:
+      repository: rpolicarpo100/APP_Teste
+      branch: main
+    build:
+      type: dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - port: 8000
+        protocol: http
+    routes:
+      - path: /
+    env:
+      - key: DATABASE_URL
+        value: "{{ .DATABASE_URL }}"
+      - key: GROQ_API_KEY
+        value: "{{ .GROQ_API_KEY }}"
+      - key: GEMINI_API_KEY
+        value: "{{ .GEMINI_API_KEY }}"
+      - key: OPENROUTER_API_KEY
+        value: "{{ .OPENROUTER_API_KEY }}"
+    regions:
+      - fra
+    instance_type: nano
+    health_checks:
+      - path: /health
+        port: 8000
