@@ -41,9 +41,11 @@ def _get_workspace_path() -> Path:
     input_schema={"type": "object", "properties": {"token": {"type": "string"}}, "required": []},
     output_schema={"type": "object", "properties": {"valid": {"type": "boolean"}}}
 )
-def cloudflare_test(token: str = None) -> Dict[str, Any]:
+def cloudflare_test(token: str = None, account_id: str = None, gateway_id: str = None) -> Dict[str, Any]:
     cfg = _get_cf_config()
     test_token = token or cfg["token"]
+    test_account_id = account_id or cfg["account_id"]
+    test_gateway_id = gateway_id or cfg["gateway_id"]
     if not test_token:
         return {
             "valid": False,
@@ -94,11 +96,11 @@ def cloudflare_test(token: str = None) -> Dict[str, Any]:
         results["zones_error"] = str(e)
     
     # Try Workers AI if account_id available
-    if cfg["account_id"]:
+    if test_account_id:
         try:
             with httpx.Client(timeout=20) as client:
                 resp = client.post(
-                    f"https://api.cloudflare.com/client/v4/accounts/{cfg['account_id']}/ai/run/@cf/meta/llama-3-8b-instruct",
+                    f"https://api.cloudflare.com/client/v4/accounts/{test_account_id}/ai/run/@cf/meta/llama-3-8b-instruct",
                     headers={"Authorization": f"Bearer {test_token}", "Content-Type": "application/json"},
                     json={"messages": [{"role": "user", "content": "Hello, 1+1=?"}]}
                 )
@@ -111,11 +113,11 @@ def cloudflare_test(token: str = None) -> Dict[str, Any]:
             results["workers_ai_test"] = {"ok": False, "error": str(e)}
     
     # Try AI Gateway if available
-    if cfg["account_id"] and cfg["gateway_id"]:
+    if test_account_id and test_gateway_id:
         try:
             with httpx.Client(timeout=20) as client:
                 resp = client.post(
-                    f"https://gateway.ai.cloudflare.com/v1/{cfg['account_id']}/{cfg['gateway_id']}/workers-ai/@cf/meta/llama-3-8b-instruct",
+                    f"https://gateway.ai.cloudflare.com/v1/{test_account_id}/{test_gateway_id}/workers-ai/@cf/meta/llama-3-8b-instruct",
                     headers={"Authorization": f"Bearer {test_token}", "cf-aig-authorization": f"Bearer {test_token}", "Content-Type": "application/json"},
                     json={"messages": [{"role": "user", "content": "Hello"}]}
                 )
@@ -125,13 +127,13 @@ def cloudflare_test(token: str = None) -> Dict[str, Any]:
     
     results["config"] = {
         "has_token": bool(cfg["token"]),
-        "has_account_id": bool(cfg["account_id"]),
-        "has_gateway_id": bool(cfg["gateway_id"]),
-        "account_id": cfg["account_id"][:10] + "..." if cfg["account_id"] else None,
-        "gateway_id": cfg["gateway_id"]
+        "has_account_id": bool(test_account_id),
+        "has_gateway_id": bool(test_gateway_id),
+        "account_id": test_account_id[:10] + "..." if test_account_id else None,
+        "gateway_id": test_gateway_id
     }
     
-    results["valid"] = cfg["available"]
+    results["valid"] = bool(test_token and test_account_id)
     results["message"] = "Cloudflare token válido" if cfg["available"] else "Falta CLOUDFLARE_ACCOUNT_ID — pega em https://dash.cloudflare.com → URL contém account ID"
     results["links"] = {
         "dashboard": "https://dash.cloudflare.com",

@@ -11,6 +11,8 @@ router = APIRouter()
 
 class CloudflareTestRequest(BaseModel):
     token: Optional[str] = None
+    account_id: Optional[str] = None
+    gateway_id: Optional[str] = None
 
 class CloudflareUploadRequest(BaseModel):
     filename: Optional[str] = None
@@ -29,7 +31,7 @@ def test_cloudflare():
 
 @router.post("/cloudflare/test")
 def test_cloudflare_post(req: CloudflareTestRequest):
-    return cloudflare_test(token=req.token)
+    return cloudflare_test(token=req.token, account_id=req.account_id, gateway_id=req.gateway_id)
 
 @router.get("/cloudflare/r2/status")
 def r2_status():

@@ -226,16 +226,19 @@ class CloudflareClient:
         self.api_key = os.getenv('CLOUDFLARE_API_TOKEN') or os.getenv('CF_API_TOKEN') or os.getenv('CLOUDFLARE_API_KEY')
         self.account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID') or os.getenv('CF_ACCOUNT_ID')
         self.gateway_id = os.getenv('CLOUDFLARE_GATEWAY_ID') or os.getenv('CF_GATEWAY_ID')
-        self.model = os.getenv('CLOUDFLARE_MODEL', '@cf/meta/llama-3-8b-instruct')
-        # Modelos que funcionam free
+        self.model = os.getenv('CLOUDFLARE_MODEL', '@cf/meta/llama-3.3-70b-instruct-fp8-fast')  # 2026-05-30 llama-3-8b deprecated, cfut_ token tested OK
+        # Modelos que funcionam free — testado 2026-09-14 com cfut_... (validado 2026-09-14)
+        # @cf/meta/llama-3-8b-instruct deprecated 2026-05-30 → 410, @cf/google/gemma-3-12b-it → 403 not allowed
+        # Funcionam: llama-3.3-70b-fp8-fast (200) + gpt-oss-120b (200) com account 2994d6fc...
         self.models_to_try = [
             self.model,
-            '@cf/meta/llama-3-8b-instruct',
             '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+            '@cf/openai/gpt-oss-120b',
+            '@cf/meta/llama-3-8b-instruct',  # deprecated 2026-05-30 mas mantém fallback
             '@cf/mistral/mistral-7b-instruct-v0.1',
-            '@cf/google/gemma-3-12b-it',
             '@cf/qwen/qwen2.5-coder-32b-instruct',
-            '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b'
+            '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+            '@cf/google/gemma-3-12b-it'  # 403 not allowed neste account
         ]
 
     def is_available(self) -> bool:
