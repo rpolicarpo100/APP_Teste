@@ -52,7 +52,7 @@ class GroqClient:
 class GeminiClient:
     def __init__(self):
         self.api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-        self.model = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')  # free tier
+        self.model = os.getenv('GEMINI_MODEL', 'gemini-flash-latest')  # free tier
         self.base = "https://generativelanguage.googleapis.com/v1beta"
 
     def is_available(self) -> bool:
