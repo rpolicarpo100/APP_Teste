@@ -1,0 +1,19 @@
+{
+  "name": "ai-brain-god",
+  "build": {
+    "type": "dockerfile",
+    "dockerfile": "Dockerfile.leapcell"
+  },
+  "deploy": {
+    "port": 8000,
+    "healthCheck": "/health",
+    "replicas": 1
+  },
+  "env": {
+    "DATABASE_URL": "${DATABASE_URL}",
+    "GROQ_API_KEY": "${GROQ_API_KEY}",
+    "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+    "HF_TOKEN": "${HF_TOKEN}",
+    "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}"
+  }
+}
