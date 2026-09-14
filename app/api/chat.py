@@ -165,12 +165,12 @@ def chat(request: ChatRequest):
             conn = sqlite3.connect(str(db_path))
             conn.row_factory = sqlite3.Row
             try:
-                # Cria tabelas missions/tasks se não existirem (Render ephemeral)
+                # Cria tabelas missions/tasks se não existirem (Render ephemeral) — schema completo
                 conn.execute('''CREATE TABLE IF NOT EXISTS missions (
-                    id TEXT PRIMARY KEY, objective TEXT, expected_result TEXT, context TEXT, priority TEXT, status TEXT, autonomy_level INTEGER, created_at TEXT, updated_at TEXT
+                    id TEXT PRIMARY KEY, objective TEXT NOT NULL, expected_result TEXT, context TEXT, constraints_text TEXT, priority TEXT DEFAULT 'medium', status TEXT DEFAULT 'PENDING', autonomy_level INTEGER DEFAULT 2, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, completed_at TIMESTAMP
                 )''')
                 conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
-                    id TEXT PRIMARY KEY, mission_id TEXT, objective TEXT, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT, acceptance_criteria TEXT, risk TEXT, required_tools TEXT, status TEXT, result TEXT, artifacts TEXT, created_at TEXT, updated_at TEXT, started_at TEXT, completed_at TEXT
+                    id TEXT PRIMARY KEY, mission_id TEXT REFERENCES missions(id), objective TEXT NOT NULL, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT DEFAULT 'medium', acceptance_criteria TEXT, risk TEXT DEFAULT 'low', required_tools TEXT, status TEXT DEFAULT 'PENDING', attempts INTEGER DEFAULT 0, max_attempts INTEGER DEFAULT 3, result_summary TEXT, artifacts TEXT, evidence TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, started_at TIMESTAMP, completed_at TIMESTAMP
                 )''')
                 # Remove tasks auto-geradas e cria uma específica de builder
                 conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
@@ -259,7 +259,7 @@ def chat(request: ChatRequest):
                         conn = sqlite3.connect(str(db_path))
                         try:
                             conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
-                                id TEXT PRIMARY KEY, mission_id TEXT, objective TEXT, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT, acceptance_criteria TEXT, risk TEXT, required_tools TEXT, status TEXT, result TEXT, artifacts TEXT, created_at TEXT, updated_at TEXT, started_at TEXT, completed_at TEXT
+                                id TEXT PRIMARY KEY, mission_id TEXT REFERENCES missions(id), objective TEXT NOT NULL, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT DEFAULT 'medium', acceptance_criteria TEXT, risk TEXT DEFAULT 'low', required_tools TEXT, status TEXT DEFAULT 'PENDING', attempts INTEGER DEFAULT 0, max_attempts INTEGER DEFAULT 3, result_summary TEXT, artifacts TEXT, evidence TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, started_at TIMESTAMP, completed_at TIMESTAMP
                             )''')
                             conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
                             task_id = str(uuid.uuid4())

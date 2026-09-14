@@ -29,45 +29,101 @@ class Orchestrator:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
-        # Cria tabelas se não existirem (Render ephemeral fix)
+        # Cria tabelas se não existirem (Render ephemeral fix) — schema completo de app/database/schema.sql
         conn.execute('''CREATE TABLE IF NOT EXISTS missions (
             id TEXT PRIMARY KEY,
-            objective TEXT,
+            objective TEXT NOT NULL,
             expected_result TEXT,
             context TEXT,
-            priority TEXT,
-            status TEXT,
-            autonomy_level INTEGER,
-            created_at TEXT,
-            updated_at TEXT
+            constraints_text TEXT,
+            priority TEXT DEFAULT 'medium',
+            status TEXT DEFAULT 'PENDING',
+            autonomy_level INTEGER DEFAULT 2,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
         )''')
         conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
             id TEXT PRIMARY KEY,
-            mission_id TEXT,
-            objective TEXT,
+            mission_id TEXT REFERENCES missions(id),
+            objective TEXT NOT NULL,
             description TEXT,
             agent_id TEXT,
             required_skills TEXT,
             dependencies TEXT,
-            priority TEXT,
+            priority TEXT DEFAULT 'medium',
             acceptance_criteria TEXT,
-            risk TEXT,
+            risk TEXT DEFAULT 'low',
             required_tools TEXT,
-            status TEXT,
-            result TEXT,
+            status TEXT DEFAULT 'PENDING',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            result_summary TEXT,
             artifacts TEXT,
-            created_at TEXT,
-            updated_at TEXT,
-            started_at TEXT,
-            completed_at TEXT,
-            FOREIGN KEY(mission_id) REFERENCES missions(id)
+            evidence TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            started_at TIMESTAMP,
+            completed_at TIMESTAMP
         )''')
         conn.execute('''CREATE TABLE IF NOT EXISTS conversations (
-            id TEXT PRIMARY KEY, user_id TEXT, title TEXT, created_at TEXT
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id),
+            title TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         conn.execute('''CREATE TABLE IF NOT EXISTS messages (
-            id TEXT PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, created_at TEXT
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT REFERENCES conversations(id),
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS memories (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            source TEXT,
+            confidence TEXT DEFAULT 'medium',
+            mission_id TEXT REFERENCES missions(id),
+            task_id TEXT REFERENCES tasks(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        )''')
+        # Migração para tabelas antigas que não têm result_summary, evidence, attempts etc (Render ephemeral com schema antigo)
+        try:
+            cur = conn.execute("PRAGMA table_info(tasks)")
+            cols = [row[1] for row in cur.fetchall()]
+            if "result_summary" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN result_summary TEXT")
+            if "evidence" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN evidence TEXT")
+            if "attempts" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN attempts INTEGER DEFAULT 0")
+            if "max_attempts" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN max_attempts INTEGER DEFAULT 3")
+            if "started_at" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN started_at TIMESTAMP")
+            if "completed_at" not in cols and "completed_at" not in [c for c in cols if c=="completed_at"]:
+                # tasks already has completed_at in old schema? check
+                pass
+            # missions missing columns
+            cur2 = conn.execute("PRAGMA table_info(missions)")
+            mcols = [row[1] for row in cur2.fetchall()]
+            if "constraints_text" not in mcols:
+                conn.execute("ALTER TABLE missions ADD COLUMN constraints_text TEXT")
+            if "completed_at" not in mcols:
+                conn.execute("ALTER TABLE missions ADD COLUMN completed_at TIMESTAMP")
+        except Exception as e:
+            # Se falhar migração, ignora — pode ser primeira criação
+            pass
         conn.commit()
         return conn
 
