@@ -33,12 +33,19 @@ def system_status():
     agents = agent_registry.list_agents() if agent_registry else []
     tools = tool_registry.list_available() if tool_registry else []
 
+    try:
+        from app.database.connection import get_db_type
+        db_type = get_db_type()
+    except:
+        db_type = "unknown"
+
     return {
         "app": settings.app_name,
         "autonomy_level": settings.autonomy_level,
         "max_agent_steps": settings.max_agent_steps,
         "agents": {"count": len(agents), "ids": [a.agent_id for a in agents]},
         "tools": {"count": len(tools), "ids": [t.id for t in tools]},
+        "database": {"type": db_type, "url_set": bool(__import__('os').getenv('DATABASE_URL'))},
         "ollama": {"host": settings.ollama_host, "model": settings.ollama_model, "available": ollama_client.is_available(), "models": ollama_client.list_models()[:5]},
         "security": {"allow_file_write": settings.allow_file_write, "allow_python_exec": settings.allow_python_exec},
         "timestamp": datetime.utcnow().isoformat()
