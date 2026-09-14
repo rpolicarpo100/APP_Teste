@@ -39,6 +39,7 @@ import app.tools.deploy
 import app.tools.news
 import app.tools.market_data
 import app.tools.persistent_storage
+import app.tools.cloudflare_deploy
 
 if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
     try:
@@ -59,6 +60,14 @@ else:
     print("[Main] Tools Health tools desativados")
 
 from app.api import chat, tasks, agents, memory, approvals, system, market, businesses
+
+cloudflare_available = False
+try:
+    from app.api import cloudflare as cloudflare_api
+    cloudflare_available = True
+    print("[Main] Cloudflare API OK — Workers AI + R2 + Workers Deploy")
+except Exception as e:
+    print(f"[Main] Cloudflare API fail: {e}")
 
 providers_available = False
 if os.getenv('DISABLE_PROVIDER_HEALTH') != 'true':
@@ -139,13 +148,17 @@ app.include_router(memory.router, prefix="", tags=["memory"])
 app.include_router(approvals.router, prefix="", tags=["approvals"])
 app.include_router(market.router, prefix="", tags=["market"])
 app.include_router(businesses.router, prefix="", tags=["negocios"])
-# Workspace ranking + deploy + session close — Builder limitado mas faz deploy se tiver info, após sessão ranking
+# Workspace ranking + deploy + session close + persist + cloudflare
 try:
     from app.api.workspace import router as workspace_router
     app.include_router(workspace_router, prefix="", tags=["workspace"])
-    print("[Main] Workspace Ranking + Deploy + Session Close OK — 3 novos endpoints")
+    print("[Main] Workspace Ranking + Deploy + Session Close + Persist OK — 5 novos endpoints")
 except Exception as e:
     print(f"[Main] Workspace router fail: {e}")
+
+if cloudflare_available:
+    app.include_router(cloudflare_api.router, prefix="", tags=["cloudflare"])
+    print("[Main] Cloudflare Workers AI + R2 + Workers Deploy OK — 6 novos endpoints — token cfat_...")
 
 if providers_available:
     app.include_router(providers.router, prefix="", tags=["providers"])
