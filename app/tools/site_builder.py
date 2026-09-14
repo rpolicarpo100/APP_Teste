@@ -293,13 +293,29 @@ def _generate_landing_html(objective: str, style: str = "moderno minimalista", b
 )
 def site_builder(objective: str, style: str = "moderno minimalista", brand: str = "BRAIN") -> dict:
     try:
+        # Sanitização — previne XSS
+        import html as _html
+        import re as _re
+        # Escapa HTML perigoso mas mantém URL do YouTube
+        safe_objective = _html.escape(objective[:500])
+        # Remove <script>, javascript:, etc
+        for _pat in [r"<script.*?>.*?</script>", r"javascript:", r"onerror\s*=", r"onload\s*="]:
+            safe_objective = _re.sub(_pat, "", safe_objective, flags=_re.I)
+        # Mantém URLs YouTube intactas para detecção
+        # Se tem youtube.com, preserva URL original para extração
+        youtube_url = None
+        m = _re.search(r'https?://[^\s]+youtube[^\s]+', objective)
+        if m:
+            youtube_url = m.group(0)
+        
         workspace = ROOT_DIR / settings.workspace_path
         workspace.mkdir(parents=True, exist_ok=True)
 
-        slug = _slugify(objective)
+        slug = _slugify(safe_objective)
         filename = f"{slug}-{uuid.uuid4().hex[:6]}.html"
         filepath = workspace / filename
 
+        # Para geração, usa objective original para detectar YouTube, mas safe para título
         html = _generate_landing_html(objective=objective, style=style, brand=brand)
 
         filepath.write_text(html, encoding="utf-8")

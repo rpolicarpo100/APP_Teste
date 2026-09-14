@@ -115,7 +115,7 @@ def detect_build_intent(message: str) -> tuple[bool, str, str]:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    conversation_id = request.conversation_id or str(uuid.uuid4())
+    conversation_id = real_request.conversation_id or str(uuid.uuid4())
     db_path = get_db_path()
 
     # Persiste mensagem user — cria DB e tabelas se não existirem (Render ephemeral)
@@ -130,10 +130,10 @@ def chat(request: ChatRequest):
             id TEXT PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, created_at TEXT
         )""")
         conn.execute("INSERT OR IGNORE INTO conversations (id, user_id, title, created_at) VALUES (?, ?, ?, ?)",
-                     (conversation_id, request.user_id, request.message[:50], datetime.utcnow().isoformat()))
+                     (conversation_id, real_request.user_id, real_request.message[:50], datetime.utcnow().isoformat()))
         msg_id = str(uuid.uuid4())
         conn.execute("INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
-                     (msg_id, conversation_id, "user", request.message, datetime.utcnow().isoformat()))
+                     (msg_id, conversation_id, "user", real_request.message, datetime.utcnow().isoformat()))
         conn.commit()
         cur = conn.execute("SELECT role, content FROM messages WHERE conversation_id=? ORDER BY created_at DESC LIMIT 10", (conversation_id,))
         history = [dict(r) for r in cur.fetchall()]
@@ -145,18 +145,18 @@ def chat(request: ChatRequest):
     is_build, tipo, estilo = detect_build_intent(request.message)
     
     # NOVO: 2 tabs CHAT | AGENT — CHAT faz tudo menos construir, AGENT só constrói
-    mode = (request.context or {}).get('mode', 'chat')
-    force_build = (request.context or {}).get('force_build', False)
-    no_build = (request.context or {}).get('no_build', False)
+    mode = (real_request.context or {}).get('mode', 'chat')
+    force_build = (real_request.context or {}).get('force_build', False)
+    no_build = (real_request.context or {}).get('no_build', False)
     
     if mode == 'chat' or no_build:
         is_build = False
     if mode == 'agent' or force_build:
         is_build = True
-        if 'youtube' in request.message.lower() or 'deadly' in request.message.lower():
+        if 'youtube' in real_request.message.lower() or 'deadly' in real_request.message.lower():
             tipo = 'youtube-site'
             estilo = 'gamer escuro épico'
-        if 'ai' in request.message.lower() or 'ia' in request.message.lower() or 'bot' in request.message.lower():
+        if 'ai' in real_request.message.lower() or 'ia' in real_request.message.lower() or 'bot' in real_request.message.lower():
             if tipo == 'site':
                 tipo = 'ai'
     
@@ -170,7 +170,7 @@ def chat(request: ChatRequest):
         try:
             # Cria missão com builder agent
             mission = _orchestrator.create_mission(
-                objective=request.message,
+                objective=real_request.message,
                 expected_result=f"{tipo} bonito e leve construído",
                 context={"style": estilo, "brand": "BRAIN", "tipo": tipo, "via": "chat"},
                 priority="high"
@@ -197,8 +197,8 @@ def chat(request: ChatRequest):
                 """, (
                     task_id,
                     mission_id,
-                    request.message,
-                    f"Construir {tipo} via chat: {request.message}",
+                    real_request.message,
+                    f"Construir {tipo} via chat: {real_request.message}",
                     "builder",
                     json.dumps(["site_building", "frontend_dev"], ensure_ascii=False),
                     json.dumps([], ensure_ascii=False),
@@ -231,7 +231,7 @@ def chat(request: ChatRequest):
             
             if artifacts:
                 art = artifacts[0]
-                assistant_content = f"✅ **{tipo.upper()} construído com sucesso via chat!**\n\n**Objectivo:** {request.message}\n**Estilo:** {estilo}\n**Ficheiro:** {art.get('filename')}\n**Tamanho:** {art.get('size')} bytes\n**Preview:** {art.get('url')}\n\nO site é leve, bonito e 100% estático. Abre em [{art.get('url')}]({art.get('url')}) para ver.\n\n**O que foi feito:**\n- Missão criada: {mission_id}\n- Agente: Builder Agent (site.builder tool REAL)\n- Ficheiro existe em: {art.get('path')}\n- Acessível via /workspace/{art.get('filename')}\n\nQueres que eu ajuste cores, texto ou adicione secções? Diz no chat!"
+                assistant_content = f"✅ **{tipo.upper()} construído com sucesso via chat!**\n\n**Objectivo:** {real_request.message}\n**Estilo:** {estilo}\n**Ficheiro:** {art.get('filename')}\n**Tamanho:** {art.get('size')} bytes\n**Preview:** {art.get('url')}\n\nO site é leve, bonito e 100% estático. Abre em [{art.get('url')}]({art.get('url')}) para ver.\n\n**O que foi feito:**\n- Missão criada: {mission_id}\n- Agente: Builder Agent (site.builder tool REAL)\n- Ficheiro existe em: {art.get('path')}\n- Acessível via /workspace/{art.get('filename')}\n\nQueres que eu ajuste cores, texto ou adicione secções? Diz no chat!"
             else:
                 # Mesmo sem artefactos, mostra resultado das tasks
                 assistant_content = f"🏗️ Missão de construção criada: {mission_id}\n\nObjectivo: {request.message}\nTipo: {tipo}\nEstilo: {estilo}\n\nResultado: {result.get('status_counts')}\n\n"
@@ -250,32 +250,25 @@ def chat(request: ChatRequest):
             assistant_content = f"Erro ao construir {tipo} via chat: {str(e)} — mas missão {mission_id} foi criada. Verifica /tasks/{mission_id}"
 
     if not assistant_content:
-        # Modo normal — tenta LLM universal com system prompt diferente por tab CHAT|AGENT
+        # Modo normal — tenta LLM universal: Ollama -> Groq free (14.4k/dia) -> Gemini free (60/min) -> OpenRouter free -> fallback
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
-        if mode == 'chat':
-            sys_prompt = "És o GOD Cerebro Core no modo CHAT — 10 agentes, 29 tools, Neon DB, Groq+Gemini. Fazes tudo MAS NÃO constróis sites/apps/AI. Se user pedir para criar site/app/AI/YouTube, explica que deve ir para tab AGENT BUILDER que só constrói, com Builder Agent que gera HTML leve e bonito gamer épico em /workspace com preview. Nunca digas 'Como funciona' nem peças lista de requisitos. Responde de forma útil, técnica e directa PT-PT. Custo 0: Groq, Gemini, Neon DB. Se user perguntar sobre canal Deadly Gods Portugal YouTube, analisa e dá sugestões (não constrói)."
-        elif mode == 'agent':
-            sys_prompt = "És o GOD Cerebro Core no modo AGENT BUILDER — só constróis sites/apps/AI. 10 agentes, 29 tools, Builder Agent com site.builder tool REAL que gera HTML leve e bonito 12KB em /workspace com preview instantâneo. Se user pedir para criar site YouTube Deadly Gods Portugal, já está a ser construído via Builder Agent. Estilos: gamer escuro épico para YouTube, moderno minimalista, AI Assistant. Responde curto confirmando construção PT-PT. Custo 0: Groq, Gemini, Neon DB."
-        else:
-            sys_prompt = "És o GOD Cerebro Core, orquestrador universal com 10 agentes e 29 tools. 2 tabs: CHAT faz tudo menos construir, AGENT BUILDER só constrói sites/apps/AI com Builder Agent HTML leve em /workspace. Responde de forma útil, técnica e directa PT-PT. Custo 0: Groq, Gemini, Neon DB."
-        
-        llm_resp = llm_client.chat(messages, system_prompt=sys_prompt)
+        llm_resp = llm_client.chat(messages, system_prompt="És o GOD Cerebro Core, orquestrador universal com 10 agentes e 29 tools. Se user pedir para criar app/site, explica que consegues construir via chat com Builder Agent e que vai gerar ficheiro HTML leve e bonito em /workspace. Responde de forma útil, técnica e directa. PT-PT. Custo 0: Groq, Gemini, Neon DB.")
         ollama_resp = llm_resp  # compat
         assistant_content = llm_resp.get("content", "")
 
         # assistant_content já vem do llm_client (Groq/Gemini/OpenRouter/Ollama/HuggingFace)
         # Se ainda vazio, fallback direto sem "Como funciona"
         if not assistant_content:
-            msg_lower = request.message.lower()
+            msg_lower = real_request.message.lower()
             # Se menciona site/app/ai/youtube mas não detectou como build (fallback), força build direto
             if any(k in msg_lower for k in ["site", "app", "youtube", "canal", "ai", "ia", "bot", "landing", "portfolio", "loja"]):
                 # Tenta construir diretamente sem pedir detalhes
                 if _orchestrator:
                     try:
                         mission = _orchestrator.create_mission(
-                            objective=request.message,
+                            objective=real_request.message,
                             expected_result=f"Site/app construído para: {request.message[:100]}",
-                            context={"style": "gamer escuro épico" if "youtube" in msg_lower or "deadly" in msg_lower else "moderno", "via": "chat-fallback", "url": request.message},
+                            context={"style": "gamer escuro épico" if "youtube" in msg_lower or "deadly" in msg_lower else "moderno", "via": "chat-fallback", "url": real_request.message},
                             priority="high"
                         )
                         mission_id = mission["id"]
@@ -287,7 +280,7 @@ def chat(request: ChatRequest):
                             conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
                             task_id = str(uuid.uuid4())
                             conn.execute('''INSERT INTO tasks (id, mission_id, objective, description, agent_id, required_skills, dependencies, priority, acceptance_criteria, risk, required_tools, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                (task_id, mission_id, request.message, f"Construir via chat fallback: {request.message}", "builder", json.dumps(["site_building"], ensure_ascii=False), json.dumps([], ensure_ascii=False), "high", json.dumps(["HTML construído"], ensure_ascii=False), "medium", json.dumps(["site.builder", "filesystem.write"], ensure_ascii=False), "PENDING", datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                                (task_id, mission_id, real_request.message, f"Construir via chat fallback: {request.message}", "builder", json.dumps(["site_building"], ensure_ascii=False), json.dumps([], ensure_ascii=False), "high", json.dumps(["HTML construído"], ensure_ascii=False), "medium", json.dumps(["site.builder", "filesystem.write"], ensure_ascii=False), "PENDING", datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
                             conn.commit()
                         finally:
                             conn.close()
@@ -308,17 +301,17 @@ def chat(request: ChatRequest):
                         else:
                             assistant_content = f"🏗️ Missão criada: {mission_id} — a construir '{request.message[:80]}'... Verifica /workspace para ficheiros recentes."
                     except Exception as e:
-                        assistant_content = f"Vou construir: '{request.message[:100]}' — missão criada mas erro: {str(e)[:200]}"
+                        assistant_content = f"Vou construir: '{real_request.message[:100]}' — missão criada mas erro: {str(e)[:200]}"
                 else:
-                    assistant_content = f"✅ A construir: '{request.message[:100]}' — Builder Agent vai gerar HTML leve em /workspace com preview."
+                    assistant_content = f"✅ A construir: '{real_request.message[:100]}' — Builder Agent vai gerar HTML leve em /workspace com preview."
             elif "pesquisa" in msg_lower or "research" in msg_lower:
-                assistant_content = f"🔍 A investigar: '{request.message[:100]}' — Research Agent em ação."
+                assistant_content = f"🔍 A investigar: '{real_request.message[:100]}' — Research Agent em ação."
             elif "código" in msg_lower or "code" in msg_lower:
-                assistant_content = f"💻 A codar: '{request.message[:100]}' — Coding_QA Agent."
+                assistant_content = f"💻 A codar: '{real_request.message[:100]}' — Coding_QA Agent."
             elif "design" in msg_lower:
-                assistant_content = f"🎨 A desenhar: '{request.message[:100]}' — Design Agent."
+                assistant_content = f"🎨 A desenhar: '{real_request.message[:100]}' — Design Agent."
             else:
-                assistant_content = llm_resp.get("content", f"Recebi: '{request.message[:100]}'. Sou o GOD com 10 agentes — diz 'cria um site para...' e construo na hora com preview em /workspace.")
+                assistant_content = llm_resp.get("content", f"Recebi: '{real_request.message[:100]}'. Sou o GOD com 10 agentes — diz 'cria um site para...' e construo na hora com preview em /workspace.")
 
 
     # Persiste resposta
@@ -335,7 +328,7 @@ def chat(request: ChatRequest):
     finally:
         conn.close()
 
-    memory_manager.add(f"Chat: user={request.message[:200]} assistant={assistant_content[:200]}", type="short", source="chat")
+    memory_manager.add(f"Chat: user={real_request.message[:200]} assistant={assistant_content[:200]}", type="short", source="chat")
 
     return ChatResponse(
         conversation_id=conversation_id,

@@ -1,0 +1,30 @@
+name: Keep Alive Render + Neon
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # a cada 5 minutos
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render health
+        run: |
+          echo "Pinging https://app-teste-x6od.onrender.com/health"
+          curl -s -o /dev/null -w "%{http_code}" https://app-teste-x6od.onrender.com/health
+          curl -s https://app-teste-x6od.onrender.com/health | head -c 200
+          echo ""
+          echo "Pinging /system/status"
+          curl -s https://app-teste-x6od.onrender.com/system/status | head -c 300
+          echo ""
+          echo "Pinging /tools/health"
+          curl -s https://app-teste-x6od.onrender.com/tools/health | head -c 200
+
+      - name: Ping memory and businesses (keep Neon alive)
+        run: |
+          curl -s https://app-teste-x6od.onrender.com/memory | head -c 200
+          curl -s https://app-teste-x6od.onrender.com/businesses | head -c 200
+
+      - name: Log
+        run: echo "Keep alive done at $(date) — Render free 15min spin down evitado, Neon 0.5GB permanente"

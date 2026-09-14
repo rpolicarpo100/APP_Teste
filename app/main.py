@@ -76,9 +76,14 @@ chat.set_orchestrator(orchestrator)
 
 app = FastAPI(
     title=settings.app_name,
-    description="GOD Cerebro Core — 10 agentes + auto-refresh + KPIs dinâmicos + Provider Health + Tools Health Ranking",
+    description="GOD Cerebro Core — 10 agentes + 33 tools + CHAT|AGENT + Rate Limit + Neon + Groq+Gemini",
     version="1.0.0"
 )
+
+# Rate limit
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
