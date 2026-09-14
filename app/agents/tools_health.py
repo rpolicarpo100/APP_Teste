@@ -337,7 +337,7 @@ class ToolsHealthAgent(BaseAgent):
         
         top3 = rankings[:3]
         if top3:
-            summary += f"Top: {', '.join([f'{r['tool_id']}({r['score']})' for r in top3])}. "
+            summary += "Top: " + ", ".join([f"{r['tool_id']}({r['score']})" for r in top3]) + ". "
         
         # Sugere trocas
         suggestions = []
