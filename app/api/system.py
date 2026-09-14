@@ -29,6 +29,13 @@ def system_status():
     from app.brain.router import agent_registry
     from app.tools.registry import tool_registry
     from app.models.ollama import ollama_client
+    try:
+        from app.models.llm import llm_client
+        llm_providers = llm_client.get_available_providers()
+        llm_any = llm_client.is_any_available()
+    except:
+        llm_providers = []
+        llm_any = False
 
     agents = agent_registry.list_agents() if agent_registry else []
     tools = tool_registry.list_available() if tool_registry else []
@@ -46,6 +53,7 @@ def system_status():
         "agents": {"count": len(agents), "ids": [a.agent_id for a in agents]},
         "tools": {"count": len(tools), "ids": [t.id for t in tools]},
         "database": {"type": db_type, "url_set": bool(__import__('os').getenv('DATABASE_URL'))},
+        "llm": {"available": llm_any, "providers": llm_providers, "ollama": ollama_client.is_available()},
         "ollama": {"host": settings.ollama_host, "model": settings.ollama_model, "available": ollama_client.is_available(), "models": ollama_client.list_models()[:5]},
         "security": {"allow_file_write": settings.allow_file_write, "allow_python_exec": settings.allow_python_exec},
         "timestamp": datetime.utcnow().isoformat()

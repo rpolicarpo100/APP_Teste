@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.config.settings import ROOT_DIR
 from app.models.ollama import ollama_client
+from app.models.llm import llm_client
 from app.memory.manager import memory_manager
 
 router = APIRouter()
@@ -198,11 +199,13 @@ def chat(request: ChatRequest):
             assistant_content = f"Erro ao construir {tipo} via chat: {str(e)} — mas missão {mission_id} foi criada. Verifica /tasks/{mission_id}"
 
     if not assistant_content:
-        # Modo normal — tenta Ollama, senão fallback
+        # Modo normal — tenta LLM universal: Ollama -> Groq free (14.4k/dia) -> Gemini free (60/min) -> OpenRouter free -> fallback
         messages = [{"role": m["role"], "content": m["content"]} for m in history]
-        ollama_resp = ollama_client.chat(messages, system_prompt="És o GOD Cerebro Core, orquestrador universal. Se user pedir para criar app/site, explica que consegues construir via chat com Builder Agent e que vai gerar ficheiro HTML leve e bonito em /workspace. Responde de forma útil, técnica e directa. PT-PT.")
+        llm_resp = llm_client.chat(messages, system_prompt="És o GOD Cerebro Core, orquestrador universal com 10 agentes e 29 tools. Se user pedir para criar app/site, explica que consegues construir via chat com Builder Agent e que vai gerar ficheiro HTML leve e bonito em /workspace. Responde de forma útil, técnica e directa. PT-PT. Custo 0: Groq, Gemini, Neon DB.")
+        ollama_resp = llm_resp  # compat
+        assistant_content = llm_resp.get("content", "")
 
-        assistant_content = ollama_resp.get("content", "")
+        # assistant_content já vem do llm_client (Groq/Gemini/OpenRouter/Ollama)
         if not assistant_content:
             msg_lower = request.message.lower()
             if "app" in msg_lower or "site" in msg_lower:
@@ -216,7 +219,8 @@ def chat(request: ChatRequest):
             elif "negócio" in msg_lower or "negocio" in msg_lower:
                 assistant_content = f"Pedido negócio: '{request.message}'. Business Agent com cálculo margem transparente."
             else:
-                assistant_content = f"Recebi: '{request.message}'. Sou o Brain — DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES. Pelo CHAT consigo construir apps e sites reais — diz 'Cria um site...' e eu gero HTML leve e bonito com preview. Ollama: {ollama_resp.get('available', False)}"
+                assistant_content = f"Recebi: '{request.message}'. Sou o Brain — DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES. Pelo CHAT consigo construir apps e sites reais — diz 'Cria um site...' e eu gero HTML leve e bonito com preview. LLM: {llm_resp.get('provider','fallback')} disponível: {llm_resp.get('available', False)} — Custo 0: GROQ_API_KEY free 14.4k/dia em console.groq.com"
+
 
     # Persiste resposta
     conn = sqlite3.connect(str(db_path))
