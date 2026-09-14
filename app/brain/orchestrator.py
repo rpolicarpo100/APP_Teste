@@ -26,8 +26,49 @@ class Orchestrator:
         self.db_path = ROOT_DIR / "data" / "brain.db"
 
     def _get_conn(self):
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        # Cria tabelas se não existirem (Render ephemeral fix)
+        conn.execute('''CREATE TABLE IF NOT EXISTS missions (
+            id TEXT PRIMARY KEY,
+            objective TEXT,
+            expected_result TEXT,
+            context TEXT,
+            priority TEXT,
+            status TEXT,
+            autonomy_level INTEGER,
+            created_at TEXT,
+            updated_at TEXT
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
+            id TEXT PRIMARY KEY,
+            mission_id TEXT,
+            objective TEXT,
+            description TEXT,
+            agent_id TEXT,
+            required_skills TEXT,
+            dependencies TEXT,
+            priority TEXT,
+            acceptance_criteria TEXT,
+            risk TEXT,
+            required_tools TEXT,
+            status TEXT,
+            result TEXT,
+            artifacts TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            started_at TEXT,
+            completed_at TEXT,
+            FOREIGN KEY(mission_id) REFERENCES missions(id)
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY, user_id TEXT, title TEXT, created_at TEXT
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS messages (
+            id TEXT PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, created_at TEXT
+        )''')
+        conn.commit()
         return conn
 
     def create_mission(self, objective: str, expected_result: str = None, context: Dict[str, Any] = None, priority: str = "medium", autonomy_level: int = None) -> Dict[str, Any]:

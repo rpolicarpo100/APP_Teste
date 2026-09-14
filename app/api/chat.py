@@ -165,6 +165,13 @@ def chat(request: ChatRequest):
             conn = sqlite3.connect(str(db_path))
             conn.row_factory = sqlite3.Row
             try:
+                # Cria tabelas missions/tasks se não existirem (Render ephemeral)
+                conn.execute('''CREATE TABLE IF NOT EXISTS missions (
+                    id TEXT PRIMARY KEY, objective TEXT, expected_result TEXT, context TEXT, priority TEXT, status TEXT, autonomy_level INTEGER, created_at TEXT, updated_at TEXT
+                )''')
+                conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY, mission_id TEXT, objective TEXT, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT, acceptance_criteria TEXT, risk TEXT, required_tools TEXT, status TEXT, result TEXT, artifacts TEXT, created_at TEXT, updated_at TEXT, started_at TEXT, completed_at TEXT
+                )''')
                 # Remove tasks auto-geradas e cria uma específica de builder
                 conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
                 task_id = str(uuid.uuid4())
@@ -251,6 +258,9 @@ def chat(request: ChatRequest):
                         mission_id = mission["id"]
                         conn = sqlite3.connect(str(db_path))
                         try:
+                            conn.execute('''CREATE TABLE IF NOT EXISTS tasks (
+                                id TEXT PRIMARY KEY, mission_id TEXT, objective TEXT, description TEXT, agent_id TEXT, required_skills TEXT, dependencies TEXT, priority TEXT, acceptance_criteria TEXT, risk TEXT, required_tools TEXT, status TEXT, result TEXT, artifacts TEXT, created_at TEXT, updated_at TEXT, started_at TEXT, completed_at TEXT
+                            )''')
                             conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
                             task_id = str(uuid.uuid4())
                             conn.execute('''INSERT INTO tasks (id, mission_id, objective, description, agent_id, required_skills, dependencies, priority, acceptance_criteria, risk, required_tools, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
