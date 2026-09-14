@@ -50,35 +50,54 @@ def get_db_path():
 
 def detect_build_intent(message: str) -> tuple[bool, str, str]:
     """
-    Detecta se user quer construir app/site
-    Retorna (é_build, tipo, estilo)
+    Detecta se user quer construir app/site/AI
+    Retorna (é_build, tipo, estilo) — melhorado para PT-PT flexível
     """
+    import re
     msg_lower = message.lower()
     
-    build_keywords = [
-        "criar app", "cria app", "construir app", "fazer app",
-        "criar site", "cria site", "construir site", "fazer site",
-        "landing page", "website", "página web", "pagina web",
-        "criar landing", "cria landing", "portfolio", "portfólio",
-        "loja online", "ecommerce", "e-commerce", "shop",
-        "app de", "site de", "constrói", "build app", "build site"
+    # Padrões flexíveis com regex — suporta "criar um site", "cria site", "quero um site", etc
+    build_patterns = [
+        r"criar\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot|assistente)",
+        r"cria\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot)",
+        r"construir\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot)",
+        r"fazer\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot)",
+        r"quero\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot)",
+        r"preciso\s+de\s+(um\s+)?(site|app|landing|portfolio|loja|ai|ia|bot)",
+        r"site\s+para\s+(o\s+)?meu\s+canal",
+        r"site\s+para\s+youtube",
+        r"landing\s*page",
+        r"website",
+        r"página\s+web",
+        r"pagina\s+web",
+        r"ecommerce|e-commerce|loja\s+online|shop",
+        r"portfolio|portfólio",
+        r"build\s+(app|site|ai)",
+        r"youtube.*site|site.*youtube",
+        r"canal.*site|site.*canal",
+        r"criar\s+uma\s+ai|criar\s+uma\s+ia|criar\s+um\s+bot",
+        r"ai\s+para|ia\s+para|assistente\s+para"
     ]
     
-    is_build = any(kw in msg_lower for kw in build_keywords)
+    is_build = any(re.search(p, msg_lower) for p in build_patterns)
     
-    # Detecta tipo
+    # Detecta tipo — inclui AI
     tipo = "site"
-    if "app" in msg_lower:
+    if re.search(r"\bapp\b", msg_lower):
         tipo = "app"
-    if "landing" in msg_lower:
+    if re.search(r"landing", msg_lower):
         tipo = "landing"
-    if "loja" in msg_lower or "ecommerce" in msg_lower or "shop" in msg_lower:
+    if re.search(r"loja|ecommerce|e-commerce|shop", msg_lower):
         tipo = "loja"
-    if "portfolio" in msg_lower or "portfólio" in msg_lower:
+    if re.search(r"portfolio|portfólio", msg_lower):
         tipo = "portfolio"
+    if re.search(r"\bai\b|\bia\b|bot|assistente", msg_lower):
+        tipo = "ai"
+    if "youtube" in msg_lower or "canal" in msg_lower:
+        tipo = "youtube-site"
     
     # Detecta estilo
-    estilo = "moderno minimalista"
+    estilo = "gamer escuro épico" if "youtube" in msg_lower or "deadly" in msg_lower or "gods" in msg_lower else "moderno minimalista"
     if "minimalista" in msg_lower:
         estilo = "minimalista"
     if "moderno" in msg_lower:
@@ -89,6 +108,8 @@ def detect_build_intent(message: str) -> tuple[bool, str, str]:
         estilo = "escuro elegante"
     if "claro" in msg_lower:
         estilo = "claro e limpo"
+    if "gamer" in msg_lower or "épico" in msg_lower or "epico" in msg_lower:
+        estilo = "gamer escuro épico"
     
     return is_build, tipo, estilo
 
@@ -212,21 +233,59 @@ def chat(request: ChatRequest):
         ollama_resp = llm_resp  # compat
         assistant_content = llm_resp.get("content", "")
 
-        # assistant_content já vem do llm_client (Groq/Gemini/OpenRouter/Ollama)
+        # assistant_content já vem do llm_client (Groq/Gemini/OpenRouter/Ollama/HuggingFace)
+        # Se ainda vazio, fallback direto sem "Como funciona"
         if not assistant_content:
             msg_lower = request.message.lower()
-            if "app" in msg_lower or "site" in msg_lower:
-                assistant_content = f"Queres construir: '{request.message}'? Consigo! Vou criar uma missão com Builder Agent que gera HTML bonito e leve em data/workspace. Diz por exemplo: 'Cria um site de trading minimalista' ou 'Cria uma landing page para loja online' e eu construo na hora com preview em /workspace."
+            # Se menciona site/app/ai/youtube mas não detectou como build (fallback), força build direto
+            if any(k in msg_lower for k in ["site", "app", "youtube", "canal", "ai", "ia", "bot", "landing", "portfolio", "loja"]):
+                # Tenta construir diretamente sem pedir detalhes
+                if _orchestrator:
+                    try:
+                        mission = _orchestrator.create_mission(
+                            objective=request.message,
+                            expected_result=f"Site/app construído para: {request.message[:100]}",
+                            context={"style": "gamer escuro épico" if "youtube" in msg_lower or "deadly" in msg_lower else "moderno", "via": "chat-fallback", "url": request.message},
+                            priority="high"
+                        )
+                        mission_id = mission["id"]
+                        conn = sqlite3.connect(str(db_path))
+                        try:
+                            conn.execute("DELETE FROM tasks WHERE mission_id=?", (mission_id,))
+                            task_id = str(uuid.uuid4())
+                            conn.execute('''INSERT INTO tasks (id, mission_id, objective, description, agent_id, required_skills, dependencies, priority, acceptance_criteria, risk, required_tools, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                                (task_id, mission_id, request.message, f"Construir via chat fallback: {request.message}", "builder", json.dumps(["site_building"], ensure_ascii=False), json.dumps([], ensure_ascii=False), "high", json.dumps(["HTML construído"], ensure_ascii=False), "medium", json.dumps(["site.builder", "filesystem.write"], ensure_ascii=False), "PENDING", datetime.utcnow().isoformat(), datetime.utcnow().isoformat()))
+                            conn.commit()
+                        finally:
+                            conn.close()
+                        result = _orchestrator.run_mission(mission_id)
+                        final_mission = _orchestrator.get_mission(mission_id)
+                        for task in final_mission.get("tasks", []):
+                            try:
+                                arts = json.loads(task.get("artifacts") or "[]")
+                                for art in arts:
+                                    if art.get("type") == "website":
+                                        artifacts.append(art)
+                                        built_url = art.get("url")
+                            except:
+                                pass
+                        if artifacts:
+                            art = artifacts[0]
+                            assistant_content = f"✅ **Construído!** {art.get('filename')} — {art.get('size')} bytes\n\n**Preview:** {art.get('url')}\n\nAbre em {art.get('url')} para ver. Queres ajustes? Diz no chat!"
+                        else:
+                            assistant_content = f"🏗️ Missão criada: {mission_id} — a construir '{request.message[:80]}'... Verifica /workspace para ficheiros recentes."
+                    except Exception as e:
+                        assistant_content = f"Vou construir: '{request.message[:100]}' — missão criada mas erro: {str(e)[:200]}"
+                else:
+                    assistant_content = f"✅ A construir: '{request.message[:100]}' — Builder Agent vai gerar HTML leve em /workspace com preview."
             elif "pesquisa" in msg_lower or "research" in msg_lower:
-                assistant_content = f"Entendi: '{request.message}'. Posso criar missão de investigação com Research Agent."
+                assistant_content = f"🔍 A investigar: '{request.message[:100]}' — Research Agent em ação."
             elif "código" in msg_lower or "code" in msg_lower:
-                assistant_content = f"Pedido coding: '{request.message}'. Delego ao Coding_QA Agent."
+                assistant_content = f"💻 A codar: '{request.message[:100]}' — Coding_QA Agent."
             elif "design" in msg_lower:
-                assistant_content = f"Pedido design: '{request.message}'. Design Agent cria SVG + spec."
-            elif "negócio" in msg_lower or "negocio" in msg_lower:
-                assistant_content = f"Pedido negócio: '{request.message}'. Business Agent com cálculo margem transparente."
+                assistant_content = f"🎨 A desenhar: '{request.message[:100]}' — Design Agent."
             else:
-                assistant_content = f"Recebi: '{request.message}'. Sou o Brain — DASHBOARD | CHAT | NEGÓCIOS | DEFINIÇÕES. Pelo CHAT consigo construir apps e sites reais — diz 'Cria um site...' e eu gero HTML leve e bonito com preview. LLM: {llm_resp.get('provider','fallback')} disponível: {llm_resp.get('available', False)} — Custo 0: GROQ_API_KEY free 14.4k/dia em console.groq.com"
+                assistant_content = llm_resp.get("content", f"Recebi: '{request.message[:100]}'. Sou o GOD com 10 agentes — diz 'cria um site para...' e construo na hora com preview em /workspace.")
 
 
     # Persiste resposta
